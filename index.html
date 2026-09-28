@@ -1,0 +1,2790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nikocraft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{
+  --grass:#5f9f38; --dirt:#86603f;
+  --panel:rgba(28,24,20,.9); --panel-edge:#3b3129; --text:#f3eee4; --muted:#bdb3a4;
+  --slot:#6b5f53; --slot-dark:#3a322b; --gold:#f6d14a;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --panel:rgba(18,15,12,.93); } }
+:root[data-theme="dark"]{ --panel:rgba(18,15,12,.93); }
+html{ scroll-padding-top:env(safe-area-inset-top,0px); }
+*,*::before,*::after{ box-sizing:inherit; }
+html,body{ margin:0; height:100%; overflow:hidden; background:#0d1220; color:var(--text);
+  font-family:'VT323',ui-monospace,Menlo,Consolas,monospace; font-size:20px; user-select:none; -webkit-user-select:none; }
+canvas#c{ position:fixed; inset:0; width:100%; height:100%; display:block; }
+.hidden{ display:none !important; }
+.overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:20; }
+.dim{ background:rgba(0,0,0,.45); }
+.panel{ background:var(--panel); border:4px solid var(--panel-edge); box-shadow:0 0 0 4px #000, inset 0 0 0 2px rgba(255,255,255,.06);
+  padding:20px 24px; max-width:min(720px,94vw); max-height:88vh; overflow:auto; }
+h1,h2{ font-family:'Press Start 2P',ui-monospace,monospace; font-weight:400; margin:0 0 14px; line-height:1.3; }
+h1{ font-size:clamp(28px,7vw,58px); color:#fff; text-shadow:4px 4px 0 #3a2a1a, 8px 8px 0 rgba(0,0,0,.35); }
+h2{ font-size:15px; }
+p{ margin:6px 0; line-height:1.15; }
+.btn{ font-family:inherit; font-size:22px; color:#fff; background:#6f6f6f; border:3px solid #000; box-shadow:inset -3px -3px 0 #4a4a4a, inset 3px 3px 0 #a8a8a8;
+  padding:8px 18px; cursor:pointer; margin:5px 0; display:block; width:100%; text-shadow:2px 2px 0 #333; text-align:center; }
+.btn:hover,.btn:focus-visible{ background:#7c8fc4; box-shadow:inset -3px -3px 0 #4d5c86, inset 3px 3px 0 #b7c5ec; outline:none; }
+.btn.go{ background:var(--grass); box-shadow:inset -3px -3px 0 #3d6b22, inset 3px 3px 0 #8ccb5f; }
+.btn.warn{ background:#9b3a2e; box-shadow:inset -3px -3px 0 #6a241b, inset 3px 3px 0 #cf6a5c; }
+.btn:disabled{ opacity:.45; cursor:default; }
+.btn.mini{ width:auto; font-size:19px; padding:3px 10px; margin:0; }
+label{ display:block; margin:8px 0 4px; color:var(--muted); }
+input[type=text]{ font-family:inherit; font-size:22px; width:100%; background:#000; color:#fff; border:3px solid #a0a0a0; padding:6px 10px; }
+input[type=text]:focus-visible{ outline:2px solid var(--gold); }
+.seg{ display:flex; gap:6px; }
+.seg button{ font-family:inherit; font-size:20px; flex:1; padding:6px; background:#3a322b; color:var(--muted); border:3px solid #000; cursor:pointer; }
+.seg button.on{ background:var(--dirt); color:#fff; }
+#title{ overflow:auto; align-items:flex-start; background:
+   linear-gradient(to bottom, #7fb2f0 0%, #a9cdf5 40%, transparent 40%),
+   repeating-linear-gradient(90deg, #5f9f38 0 32px, #56932f 32px 64px) 0 40%/100% 18px no-repeat,
+   repeating-linear-gradient(90deg, #86603f 0 32px, #7a5637 32px 64px) 0 calc(40% + 18px)/100% 100% no-repeat; }
+#title .wrap{ padding:28px 16px; width:min(560px,96vw); margin:0 auto; }
+#title h1{ text-align:center; }
+#title .panel{ margin-top:16px; max-height:none; }
+.wrow{ display:flex; align-items:center; gap:8px; padding:8px 0; border-top:2px solid rgba(255,255,255,.08); }
+.wrow:first-child{ border-top:0; }
+.wrow .wname{ flex:1; min-width:0; }
+.wrow .wname b{ font-weight:400; font-size:23px; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wrow .wname span{ color:var(--muted); font-size:17px; }
+.empty{ color:var(--muted); }
+.keys{ columns:2; column-gap:18px; color:var(--muted); font-size:18px; }
+.keys b{ color:var(--text); font-weight:400; }
+/* HUD */
+#hud{ position:fixed; inset:0; pointer-events:none; z-index:5; }
+#cross{ position:absolute; left:50%; top:50%; width:22px; height:22px; margin:-11px 0 0 -11px; mix-blend-mode:difference; }
+#cross::before,#cross::after{ content:""; position:absolute; background:#fff; }
+#cross::before{ left:10px; top:0; width:2px; height:22px; } #cross::after{ top:10px; left:0; height:2px; width:22px; }
+#mine{ position:absolute; left:50%; top:calc(50% + 20px); width:60px; height:6px; margin-left:-30px; background:rgba(0,0,0,.5); border:1px solid #000; }
+#mine i{ display:block; height:100%; width:0; background:#fff; }
+#hotbar{ position:absolute; left:50%; bottom:calc(10px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); display:flex; background:rgba(0,0,0,.45); border:3px solid #111; padding:2px; }
+.slot{ width:48px; height:48px; position:relative; background:var(--slot); border:2px solid; border-color:var(--slot-dark) #9d9186 #9d9186 var(--slot-dark); margin:1px; }
+#hotbar .slot.sel{ outline:4px solid #fff; outline-offset:-1px; z-index:1; }
+.icon{ position:absolute; inset:7px; background-size:1600% 1600%; image-rendering:pixelated; }
+.cnt{ position:absolute; right:2px; bottom:-3px; font-size:20px; color:#fff; text-shadow:2px 2px 0 #3f3f3f; }
+#stats{ position:absolute; left:50%; bottom:calc(72px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); width:470px; max-width:96vw; display:flex; justify-content:space-between; }
+#hearts,#hunger{ display:flex; gap:1px; }
+#hunger{ flex-direction:row-reverse; }
+.heart{ font-size:22px; line-height:1; background:#3b1111; -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(1px 1px 0 #000); }
+.heart.full{ background:#e13131; -webkit-background-clip:text; background-clip:text; }
+.heart.half{ background:linear-gradient(90deg,#e13131 50%,#3b1111 50%); -webkit-background-clip:text; background-clip:text; }
+.hun{ position:relative; width:21px; height:21px; }
+.hun .icon{ inset:0; width:21px; height:21px; }
+.hun > .icon{ filter:grayscale(1) brightness(.35); }
+.hun b{ position:absolute; top:0; right:0; height:100%; overflow:hidden; }
+.hun b .icon{ left:auto; right:0; }
+#itemName{ position:absolute; left:50%; bottom:calc(100px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); font-size:24px; text-shadow:2px 2px 0 #000; transition:opacity .4s; opacity:0; white-space:nowrap; }
+#info{ position:absolute; left:8px; top:calc(8px + env(safe-area-inset-top,0px)); font-size:18px; line-height:1.05; text-shadow:2px 2px 0 #000; white-space:pre; }
+#modeTag{ position:absolute; right:10px; top:calc(8px + env(safe-area-inset-top,0px)); font-size:20px; text-shadow:2px 2px 0 #000; }
+#coords{ position:absolute; right:10px; top:calc(36px + env(safe-area-inset-top,0px)); font-size:17px; color:var(--muted); text-shadow:2px 2px 0 #000; }
+#water{ position:fixed; inset:0; background:rgba(30,70,170,.35); pointer-events:none; z-index:4; }
+#hurt{ position:fixed; inset:0; pointer-events:none; z-index:4; opacity:0; background:radial-gradient(ellipse at center, transparent 45%, rgba(200,0,0,.55)); }
+#loading{ position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center; background:#241a12; font-family:'Press Start 2P',monospace; font-size:16px; }
+/* inventory */
+.grid{ display:grid; grid-template-columns:repeat(9,52px); margin:6px 0; }
+.grid .slot{ cursor:pointer; }
+.grid .slot:hover{ background:#8a7e72; }
+.grid .slot.sel{ outline:3px solid #fff; outline-offset:-2px; }
+#craft .rec{ display:flex; align-items:center; gap:10px; padding:4px 0; border-top:2px solid rgba(255,255,255,.07); }
+#craft .rec .slot{ width:40px; height:40px; flex:none; }
+#craft .rec .icon{ inset:5px; }
+#craft .rec span{ flex:1; }
+#craft .btn{ width:auto; padding:4px 14px; font-size:20px; margin:0; }
+.craftRow{ display:flex; align-items:center; gap:14px; margin:8px 0; }
+.grid3{ grid-template-columns:repeat(3,52px); margin:0; }
+.grid4{ grid-template-columns:repeat(4,52px); }
+.grid9{ grid-template-columns:repeat(9,52px); margin-bottom:10px; }
+.pixelCanvas{ width:288px; height:288px; image-rendering:pixelated; border:3px solid #000; background:#444; cursor:crosshair; touch-action:none; flex:none; }
+.charRow{ display:flex; gap:14px; align-items:flex-start; margin:10px 0; flex-wrap:wrap; }
+.palette2{ display:grid; grid-template-columns:repeat(6,28px); gap:4px; align-content:flex-start; }
+.palette2 div{ width:28px; height:28px; border:2px solid #000; cursor:pointer; }
+.charBtnRow{ display:flex; gap:8px; margin-top:6px; }
+.charBtnRow .btn{ margin:0; }
+#customColor{ width:60px; height:32px; padding:2px; margin:4px 0; cursor:pointer; }
+.craftArrow{ font-size:28px; color:var(--muted); }
+.slot.big{ width:56px; height:56px; }
+.slot.big.ready{ outline:3px solid var(--gold); outline-offset:-2px; }
+@media (max-width:560px){ .grid3{ grid-template-columns:repeat(3,36px);} .slot.big{width:40px;height:40px} }
+#held{ position:fixed; width:40px; height:40px; pointer-events:none; z-index:40; }
+#held .icon{ inset:0; }
+.sec{ color:var(--muted); margin-top:10px; }
+input[type=range]{ width:100%; accent-color:var(--grass); }
+@media (max-width:560px){ .grid{ grid-template-columns:repeat(9,36px);} .grid .slot{width:34px;height:34px} .grid .icon{inset:4px} .slot{width:36px;height:36px} .icon{inset:5px} .cnt{font-size:16px} #stats{bottom:calc(56px + env(safe-area-inset-bottom,0px)); width:350px} .heart{font-size:15px} .hun,.hun .icon{width:15px;height:15px} }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="water" class="hidden"></div>
+<div id="hurt"></div>
+
+<div id="hud" class="hidden">
+  <div id="cross"></div>
+  <div id="mine" class="hidden"><i></i></div>
+  <div id="info" class="hidden"></div>
+  <div id="modeTag"></div>
+  <div id="coords"></div>
+  <div id="itemName"></div>
+  <div id="stats"><div id="hearts"></div><div id="hunger"></div></div>
+  <div id="hotbar"></div>
+</div>
+
+<div id="title" class="overlay">
+  <div class="wrap">
+    <h1>Nikocraft</h1>
+    <div class="panel">
+      <h2>Your worlds</h2>
+      <div id="worldList"></div>
+      <label class="btn" for="fileIn" style="margin-top:12px">Open a world file (.txt)</label>
+      <input type="file" id="fileIn" accept=".txt,.json,text/plain,application/json" class="hidden">
+      <p id="titleMsg" class="sec"></p>
+    </div>
+    <div class="panel hidden" id="mpPanel">
+      <h2>Play together</h2>
+      <p class="sec">This page is being hosted for your network. Anyone who joins here plays in the same shared world and can see each other.</p>
+      <label for="mpName">Your name</label>
+      <input type="text" id="mpName" maxlength="20" placeholder="Steve">
+      <button class="btn go" id="mpJoinBtn" style="margin-top:14px">Join the shared world</button>
+      <p id="mpMsg" class="sec"></p>
+    </div>
+    <div class="panel">
+      <h2>New world</h2>
+      <label for="wname">World name</label>
+      <input type="text" id="wname" maxlength="40" placeholder="My world">
+      <label for="seed">Seed</label>
+      <input type="text" id="seed" maxlength="32" placeholder="Leave empty for a random world">
+      <label>Game mode</label>
+      <div class="seg" id="modeSeg"><button data-m="survival" class="on">Survival</button><button data-m="creative">Creative</button></div>
+      <button class="btn go" id="newBtn" style="margin-top:14px">Create world</button>
+    </div>
+    <div class="panel">
+      <h2>Controls</h2>
+      <div class="keys">
+        <div><b>WASD</b> move</div><div><b>Mouse</b> look</div>
+        <div><b>Space</b> jump / swim</div><div><b>Shift</b> sprint</div>
+        <div><b>Left click</b> mine / attack</div><div><b>Right click</b> place / eat</div>
+        <div><b>1–9, wheel</b> hotbar</div><div><b>E</b> inventory and crafting</div>
+        <div><b>F</b> fly (creative)</div><div><b>Middle click</b> pick block</div>
+        <div><b>F3</b> debug and biome</div><div><b>Esc</b> pause</div>
+        <div><b>T</b> commands</div><div><b>N</b> next dimension</div>
+        <div><b>F5</b> change perspective</div><div><b>C</b> customize character</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="pause" class="overlay dim hidden">
+  <div class="panel" style="width:min(420px,94vw)">
+    <h2>Game paused</h2>
+    <button class="btn go" id="resumeBtn">Back to game</button>
+    <label for="rd">Render distance: <span id="rdVal">4</span> chunks</label>
+    <input type="range" id="rd" min="2" max="8" value="4">
+    <button class="btn" id="modeBtn">Switch to creative</button>
+    <button class="btn" id="charBtn">Customize character</button>
+    <button class="btn" id="saveBtn">Save world</button>
+    <button class="btn" id="dlBtn">Download world file (.txt)</button>
+    <button class="btn" id="titleBtn">Save and quit to title</button>
+    <p id="saveMsg" class="sec"></p>
+  </div>
+</div>
+
+<div id="inv" class="overlay dim hidden">
+  <div class="panel">
+    <h2 id="invTitle">Inventory</h2>
+    <div id="paletteWrap"><p class="sec">Click anything to put it in your selected hotbar slot</p><div id="palette" class="grid"></div></div>
+    <div id="armorWrap"><p class="sec">Armor</p><div id="armorGrid" class="grid grid4"></div></div>
+    <div id="mainWrap"><div id="mainGrid" class="grid"></div></div>
+    <p class="sec">Hotbar</p>
+    <div id="hotGrid" class="grid"></div>
+    <div id="craftWrap">
+      <div class="seg" id="bookTabs"><button data-b="craft" class="on">Craft Book</button><button data-b="cook">Cook Book</button></div>
+      <div id="craftPane">
+        <div class="craftRow">
+          <div id="craftGridEl" class="grid grid3"></div>
+          <div class="craftArrow">&#8594;</div>
+          <div id="craftOutput" class="slot big"></div>
+        </div>
+        <p class="sec">Recipes (click to load into the grid)</p>
+        <div id="craftBookList"></div>
+      </div>
+      <div id="cookPane" class="hidden">
+        <p class="sec">Furnace recipes (click to cook)</p>
+        <div id="cookBookList"></div>
+      </div>
+    </div>
+    <p class="sec">Press E to close</p>
+  </div>
+</div>
+
+<div id="charEditor" class="overlay dim hidden">
+  <div class="panel" style="width:min(560px,96vw)">
+    <h2>Customize character</h2>
+    <p class="sec">Click or drag to paint. Pick a part below, then a color, then draw.</p>
+    <div class="seg" id="partTabs">
+      <button data-p="head" class="on">Head</button>
+      <button data-p="body">Body</button>
+      <button data-p="arm">Arms</button>
+      <button data-p="leg">Legs</button>
+    </div>
+    <div class="charRow">
+      <canvas id="skinCanvas" width="16" height="16" class="pixelCanvas"></canvas>
+      <div id="palette2" class="palette2"></div>
+    </div>
+    <input type="color" id="customColor" value="#7a4a2a">
+    <button class="btn mini" id="eraseBtn">Eraser</button>
+    <div class="charBtnRow">
+      <button class="btn" id="charSaveBtn">Save and apply</button>
+      <button class="btn" id="charResetBtn">Reset to default</button>
+    </div>
+    <div class="charBtnRow">
+      <button class="btn" id="charExportBtn">Export character file</button>
+      <label class="btn" for="charImportIn">Import character file</label>
+      <input type="file" id="charImportIn" accept=".json" class="hidden">
+    </div>
+    <p id="charMsg" class="sec"></p>
+    <button class="btn" id="charCloseBtn">Close</button>
+  </div>
+</div>
+
+<div id="chestPanel" class="overlay dim hidden">
+  <div class="panel">
+    <h2>Chest</h2>
+    <div id="chestGrid" class="grid grid9"></div>
+    <p class="sec">Your inventory</p>
+    <div id="chestPlayerGrid" class="grid"></div>
+    <div id="chestHotGrid" class="grid"></div>
+    <p class="sec">Press E to close</p>
+  </div>
+</div>
+
+<div id="cmdInput" class="overlay dim hidden">
+  <div class="panel" style="width:min(420px,94vw)">
+    <h2>Commands</h2>
+    <input type="text" id="cmdBox" placeholder="/gamemode creative" style="margin-bottom:10px">
+    <p class="sec">gamemode, give, time, tp, setblock, dim, summon</p>
+    <button class="btn" id="cmdClose">Close</button>
+  </div>
+</div>
+
+<div id="held" class="hidden"></div>
+
+<div id="dead" class="overlay hidden" style="background:rgba(120,0,0,.45)">
+  <div class="panel" style="text-align:center;width:min(380px,94vw)">
+    <h2>You died</h2>
+    <p class="sec" id="deadMsg">Your inventory is kept.</p>
+    <button class="btn go" id="respawnBtn">Respawn</button>
+  </div>
+</div>
+
+<div id="loading" class="hidden">Generating terrain…</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const V3 = THREE.Vector3;
+
+/* ================= constants ================= */
+const COLS = 16, ROWS = 16, TS = 16;
+const CS = 16, CH = 96, SEA = 30, SNOW = SEA + 32;
+const DAY_LEN = 600;
+const INDEX_KEY = 'nikocraft-worlds', WORLD_PREFIX = 'nikocraft-w-';
+const DIM_OVERWORLD = 0, DIM_NETHER = 1, DIM_END = 2;
+const DIM_NAMES = ['Overworld', 'Nether', 'End'];
+
+/* ================= blocks & items =================
+   Texture tile map: 0-41 original blocks, 42-55 original food/drop items,
+   56-69 new blocks, 70-97 new items. Every id below has a real, matching
+   fill() in makeAtlas() at the exact same tile number - no more offsets. */
+const BL = [];
+const def = (id, o) => { BL[id] = o; };
+def(0,  { n:'Air' });
+def(1,  { n:'Grass Block', t:[0,1,2], hd:.6, dr:2, cat:'dirt' });
+def(2,  { n:'Dirt', t:[2,2,2], hd:.5, cat:'dirt' });
+def(3,  { n:'Stone', t:[3,3,3], hd:1.5, dr:9, cat:'stone' });
+def(4,  { n:'Sand', t:[4,4,4], hd:.5, fall:1, cat:'dirt' });
+def(5,  { n:'Water', t:[5,5,5], hd:1e9, fluid:1 });
+def(6,  { n:'Oak Log', t:[7,6,7], hd:1.2, dr:6, cat:'wood' });
+def(7,  { n:'Oak Leaves', t:[8,8,8], hd:.2, dr:7, trans:1 });
+def(8,  { n:'Planks', t:[9,9,9], hd:1, dr:8, cat:'wood' });
+def(9,  { n:'Cobblestone', t:[10,10,10], hd:1.6, dr:9, cat:'stone' });
+def(10, { n:'Glass', t:[11,11,11], hd:.3, dr:0, cat:'stone', trans:1 });
+def(11, { n:'Bricks', t:[12,12,12], hd:1.8, dr:11, cat:'stone' });
+def(12, { n:'Snowy Grass', t:[13,14,2], hd:.6, dr:2, cat:'dirt' });
+def(13, { n:'Coal Ore', t:[15,15,15], hd:2, dr:110, cat:'stone' });
+def(14, { n:'Iron Ore', t:[16,16,16], hd:2.2, dr:115, tier:2, cat:'stone' });
+def(15, { n:'Gold Ore', t:[17,17,17], hd:2.4, dr:116, tier:3, cat:'stone' });
+def(16, { n:'Diamond Ore', t:[18,18,18], hd:3, dr:117, tier:3, cat:'stone' });
+def(17, { n:'Bedrock', t:[19,19,19], hd:1e9 });
+def(18, { n:'Wool', t:[20,20,20], hd:.5, dr:18 });
+def(19, { n:'Gravel', t:[21,21,21], hd:.6, fall:1, cat:'dirt' });
+def(20, { n:'Cactus', t:[23,22,23], hd:.4, dr:20 });
+def(21, { n:'Snow Block', t:[13,13,13], hd:.3, dr:21, cat:'dirt' });
+def(22, { n:'Stone Bricks', t:[24,24,24], hd:1.8, dr:22, cat:'stone' });
+def(23, { n:'Bookshelf', t:[9,25,9], hd:1, dr:23, cat:'wood' });
+def(24, { n:'Mossy Cobblestone', t:[26,26,26], hd:1.6, dr:24, cat:'stone' });
+def(25, { n:'Obsidian', t:[27,27,27], hd:8, dr:25, tier:3, cat:'stone' });
+def(26, { n:'Birch Log', t:[29,28,29], hd:1.2, dr:26, cat:'wood' });
+def(27, { n:'Birch Leaves', t:[30,30,30], hd:.2, dr:27, trans:1 });
+def(28, { n:'Spruce Log', t:[32,31,32], hd:1.2, dr:28, cat:'wood' });
+def(29, { n:'Spruce Leaves', t:[33,33,33], hd:.2, dr:29, trans:1 });
+def(30, { n:'Sandstone', t:[34,35,34], hd:1.2, dr:30, cat:'stone' });
+def(31, { n:'Red Sand', t:[36,36,36], hd:.5, fall:1, cat:'dirt' });
+def(32, { n:'Terracotta', t:[37,37,37], hd:1.4, dr:32, cat:'stone' });
+def(33, { n:'White Terracotta', t:[38,38,38], hd:1.4, dr:33, cat:'stone' });
+def(34, { n:'Brown Terracotta', t:[39,39,39], hd:1.4, dr:34, cat:'stone' });
+def(35, { n:'Ice', t:[40,40,40], hd:.5, dr:0 });
+def(36, { n:'Clay', t:[41,41,41], hd:.6, dr:36, cat:'dirt' });
+def(37, { n:'TNT', t:[56,56,56], hd:.6, dr:37, tnt:1 });
+def(38, { n:'Netherrack', t:[57,57,57], hd:.4, dr:38, cat:'stone' });
+def(39, { n:'Soul Sand', t:[58,58,58], hd:.5, fall:1, slowness:1, cat:'dirt' });
+def(40, { n:'Nether Brick', t:[59,59,59], hd:2, dr:40, cat:'stone' });
+def(41, { n:'Lava', t:[60,60,60], hd:1e9, fire:1, fluid:1 });
+def(42, { n:'End Stone', t:[61,61,61], hd:3, dr:42, cat:'stone' });
+def(43, { n:'Purpur Block', t:[62,62,62], hd:1.5, dr:43, cat:'stone' });
+def(44, { n:'Cobbled Deepslate', t:[63,63,63], hd:3.5, tier:2, dr:44, cat:'stone' });
+def(45, { n:'Copper Ore', t:[64,64,64], hd:1.2, dr:118, tier:2, cat:'stone' });
+def(46, { n:'Deepslate', t:[65,65,65], hd:3, dr:46, cat:'stone' });
+def(47, { n:'Diorite', t:[66,66,66], hd:1.5, dr:47, cat:'stone' });
+def(48, { n:'Granite', t:[67,67,67], hd:1.5, dr:48, cat:'stone' });
+def(49, { n:'Andesite', t:[68,68,68], hd:1.5, dr:49, cat:'stone' });
+def(50, { n:'Tuff', t:[69,69,69], hd:1.2, dr:50, cat:'stone' });
+def(51, { n:'Furnace', t:[99,98,99], hd:3.5, dr:51, cat:'stone', furnace:1 });
+def(52, { n:'Redstone Ore', t:[102,102,102], hd:2, dr:119, tier:3, cat:'stone' });
+def(53, { n:'Lapis Lazuli Ore', t:[103,103,103], hd:2, dr:144, tier:2, cat:'stone' });
+def(54, { n:'Glowstone', t:[104,104,104], hd:.5, dr:54 });
+def(55, { n:'Jungle Log', t:[106,105,106], hd:1.2, dr:55, cat:'wood' });
+def(56, { n:'Jungle Leaves', t:[107,107,107], hd:.2, dr:56, trans:1 });
+def(57, { n:'Melon Block', t:[108,109,108], hd:1, dr:157, dropN:[3,7] });
+def(58, { n:'Pumpkin', t:[110,111,110], hd:1, dr:58 });
+def(59, { n:"Jack o'Lantern", t:[110,112,110], hd:1, dr:59 });
+def(60, { n:'Crafting Table', t:[9,113,9], hd:1, dr:60, cat:'wood', craftbench:1 });
+def(61, { n:'Chest', t:[9,114,9], hd:1.5, dr:61, cat:'wood', chest:1 });
+def(62, { n:'Ladder', t:[115,115,115], hd:.4, dr:62, nonSolid:1, climb:1 });
+def(63, { n:'Torch', t:[116,116,116], hd:.1, dr:63, sprite:1, light:1 });
+def(64, { n:'Oak Door', t:[117,117,117], hd:2, dr:64, cat:'wood', door:1, opensTo:65 });
+def(65, { n:'Oak Door (open)', t:[117,117,117], hd:2, dr:64, nonSolid:1, doorOpen:64 });
+def(66, { n:'Iron Door', t:[118,118,118], hd:4, dr:66, tier:3, cat:'stone', door:1, opensTo:67, noHandToggle:1 });
+def(67, { n:'Iron Door (open)', t:[118,118,118], hd:4, dr:66, nonSolid:1, doorOpen:66 });
+def(68, { n:'Trapdoor', t:[119,119,119], hd:2, dr:68, cat:'wood', door:1, opensTo:69 });
+def(69, { n:'Trapdoor (open)', t:[119,119,119], hd:2, dr:68, nonSolid:1, doorOpen:68 });
+def(70, { n:'Lever', t:[120,120,120], hd:.3, dr:70, sprite:1, switcher:1 });
+def(71, { n:'Wooden Button', t:[9,9,9], hd:.3, dr:71, nonSolid:1, switcher:1 });
+def(72, { n:'Stone Button', t:[10,10,10], hd:.3, dr:72, nonSolid:1, switcher:1 });
+def(73, { n:'Wooden Pressure Plate', t:[9,9,9], hd:.3, dr:73, nonSolid:1, plate:1 });
+def(74, { n:'Stone Pressure Plate', t:[10,10,10], hd:.3, dr:74, nonSolid:1, plate:1 });
+def(75, { n:'Bed', t:[121,122,9], hd:.2, dr:75, bed:1 });
+def(76, { n:'Dandelion', t:[123,123,123], hd:0, dr:76, sprite:1 });
+def(77, { n:'Poppy', t:[124,124,124], hd:0, dr:77, sprite:1 });
+def(78, { n:'Brown Mushroom', t:[125,125,125], hd:0, dr:78, sprite:1 });
+def(79, { n:'Red Mushroom', t:[126,126,126], hd:0, dr:79, sprite:1 });
+def(80, { n:'Dead Bush', t:[127,127,127], hd:0, dr:80, sprite:1 });
+def(81, { n:'Tall Grass', t:[128,128,128], hd:0, dr:0, sprite:1, grassDrop:1 });
+def(82, { n:'Sugar Cane', t:[129,129,129], hd:0, dr:82, sprite:1 });
+def(83, { n:'Nether Wart', t:[130,130,130], hd:0, dr:83, sprite:1 });
+def(84, { n:'Oak Sapling', t:[131,131,131], hd:0, dr:84, sprite:1 });
+def(85, { n:'Birch Sapling', t:[132,132,132], hd:0, dr:85, sprite:1 });
+def(86, { n:'Spruce Sapling', t:[133,133,133], hd:0, dr:86, sprite:1 });
+def(87, { n:'Jungle Sapling', t:[134,134,134], hd:0, dr:87, sprite:1 });
+def(88, { n:'Vines', t:[135,135,135], hd:.2, dr:88, sprite:1, climb:1 });
+def(89, { n:'Skeleton Skull', t:[136,136,136], hd:1, dr:89, sprite:1 });
+def(90, { n:'Wither Skeleton Skull', t:[137,137,137], hd:1, dr:90, sprite:1 });
+def(91, { n:'Zombie Head', t:[138,138,138], hd:1, dr:91, sprite:1 });
+def(92, { n:'Creeper Head', t:[139,139,139], hd:1, dr:92, sprite:1 });
+// items
+def(100, { n:'Apple', item:1, icon:42, food:4, sat:2.4 });
+def(101, { n:'Raw Mutton', item:1, icon:43, food:2, sat:1.2 });
+def(102, { n:'Cooked Mutton', item:1, icon:44, food:6, sat:9.6 });
+def(103, { n:'Raw Porkchop', item:1, icon:45, food:3, sat:1.8 });
+def(104, { n:'Cooked Porkchop', item:1, icon:46, food:8, sat:12.8 });
+def(105, { n:'Raw Beef', item:1, icon:47, food:3, sat:1.8 });
+def(106, { n:'Steak', item:1, icon:48, food:8, sat:12.8 });
+def(107, { n:'Raw Chicken', item:1, icon:49, food:2, sat:1.2 });
+def(108, { n:'Cooked Chicken', item:1, icon:50, food:6, sat:7.2 });
+def(109, { n:'Rotten Flesh', item:1, icon:51, food:4, sat:.8 });
+def(110, { n:'Coal', item:1, icon:52 });
+def(111, { n:'Leather', item:1, icon:53 });
+def(112, { n:'Feather', item:1, icon:54 });
+def(113, { n:'String', item:1, icon:55 });
+def(114, { n:'Stick', item:1, icon:70 });
+def(115, { n:'Iron Ingot', item:1, icon:71 });
+def(116, { n:'Gold Ingot', item:1, icon:72 });
+def(117, { n:'Diamond', item:1, icon:73 });
+def(118, { n:'Copper Ingot', item:1, icon:74 });
+def(119, { n:'Redstone Dust', item:1, icon:75 });
+def(120, { n:'Gunpowder', item:1, icon:76 });
+def(121, { n:'Ender Pearl', item:1, icon:77 });
+def(122, { n:'Wooden Pickaxe', tool:'pickaxe', tier:1, icon:78, maxDur:60 });
+def(123, { n:'Wooden Axe', tool:'axe', tier:1, icon:79, maxDur:60 });
+def(124, { n:'Wooden Shovel', tool:'shovel', tier:1, icon:80, maxDur:60 });
+def(125, { n:'Wooden Sword', tool:'sword', tier:1, icon:81, maxDur:60, dmg:3 });
+def(126, { n:'Stone Pickaxe', tool:'pickaxe', tier:2, icon:82, maxDur:130 });
+def(127, { n:'Stone Axe', tool:'axe', tier:2, icon:83, maxDur:130 });
+def(128, { n:'Stone Shovel', tool:'shovel', tier:2, icon:84, maxDur:130 });
+def(129, { n:'Stone Sword', tool:'sword', tier:2, icon:85, maxDur:130, dmg:4 });
+def(130, { n:'Iron Pickaxe', tool:'pickaxe', tier:3, icon:86, maxDur:250 });
+def(131, { n:'Iron Axe', tool:'axe', tier:3, icon:87, maxDur:250 });
+def(132, { n:'Iron Shovel', tool:'shovel', tier:3, icon:88, maxDur:250 });
+def(133, { n:'Iron Sword', tool:'sword', tier:3, icon:89, maxDur:250, dmg:5 });
+def(134, { n:'Diamond Pickaxe', tool:'pickaxe', tier:4, icon:90, maxDur:1561 });
+def(135, { n:'Diamond Axe', tool:'axe', tier:4, icon:91, maxDur:1561 });
+def(136, { n:'Diamond Shovel', tool:'shovel', tier:4, icon:92, maxDur:1561 });
+def(137, { n:'Diamond Sword', tool:'sword', tier:4, icon:93, maxDur:1561, dmg:7 });
+def(138, { n:'Bucket', item:1, icon:94, bucket:'empty' });
+def(139, { n:'Water Bucket', item:1, icon:95, bucket:'water' });
+def(140, { n:'Lava Bucket', item:1, icon:96, bucket:'lava' });
+def(141, { n:'Milk Bucket', item:1, icon:97, bucket:'milk', food:0, sat:0 });
+def(142, { n:'Shears', tool:'shears', tier:2, icon:100, maxDur:238 });
+def(143, { n:'Flint and Steel', tool:'flint', tier:2, icon:101, maxDur:64 });
+def(144, { n:'Lapis Lazuli', item:1, icon:140 });
+def(145, { n:'Bone', item:1, icon:141 });
+def(146, { n:'Spider Eye', item:1, icon:142, food:2, sat:1.6 });
+def(147, { n:'Slimeball', item:1, icon:143 });
+def(148, { n:'Paper', item:1, icon:144 });
+def(149, { n:'Book', item:1, icon:145 });
+def(150, { n:'Sugar', item:1, icon:146 });
+def(151, { n:'Bread', item:1, icon:147, food:5, sat:6 });
+def(152, { n:'Wheat', item:1, icon:148 });
+def(153, { n:'Raw Potato', item:1, icon:149, food:1, sat:.6 });
+def(154, { n:'Baked Potato', item:1, icon:150, food:5, sat:6 });
+def(155, { n:'Poisonous Potato', item:1, icon:151, food:2, sat:1.2 });
+def(156, { n:'Golden Carrot', item:1, icon:152, food:6, sat:14.4 });
+def(157, { n:'Melon Slice', item:1, icon:153, food:2, sat:1.2 });
+def(158, { n:'Pumpkin Pie', item:1, icon:154, food:8, sat:4.8 });
+def(159, { n:'Raw Fish', item:1, icon:155, food:2, sat:1.2 });
+def(160, { n:'Cooked Fish', item:1, icon:156, food:5, sat:6 });
+def(161, { n:'Mushroom Stew', item:1, icon:157, food:6, sat:7.2 });
+def(162, { n:'Golden Apple', item:1, icon:158, food:4, sat:9.6, heal:1 });
+def(163, { n:'Glass Bottle', item:1, icon:159 });
+def(164, { n:'Fermented Spider Eye', item:1, icon:160 });
+def(165, { n:'Glistering Melon', item:1, icon:161 });
+def(166, { n:'Fishing Rod', tool:'rod', tier:1, icon:162, maxDur:64 });
+def(167, { n:'Bow', tool:'bow', tier:1, icon:163, maxDur:384 });
+def(168, { n:'Arrow', item:1, icon:164 });
+[['Leather', 0x8a5a34, 174], ['Chainmail', 0x8a8a90, 178], ['Iron', 0xd6d6da, 182], ['Gold', 0xe8c840, 186], ['Diamond', 0x6ee6e6, 190]]
+  .forEach(([mat, col, icon], mi) => {
+    ['Helmet', 'Chestplate', 'Leggings', 'Boots'].forEach((piece, pi) => {
+      def(169 + mi * 4 + pi, { n:mat + ' ' + piece, armor:['head','chest','legs','feet'][pi], armorTier:mi + 1, icon:icon + pi, maxDur:[56,81,76,66][pi] * (mi + 1) });
+    });
+  });
+const ALL_IDS = []; BL.forEach((b, i) => { if (b && i) ALL_IDS.push(i); });
+// TRANS = neighbours should still draw a face against this block (see-through or non-cube).
+// NOSOLID = the player passes through it instead of colliding with it.
+const TRANS = new Uint8Array(256), NOSOLID = new Uint8Array(256);
+TRANS[0] = 1; // air is always see-through
+BL.forEach((b, i) => {
+  if (!b) return;
+  if (b.sprite || b.fluid || b.trans || b.nonSolid) TRANS[i] = 1;
+  if (b.sprite || b.fluid || b.nonSolid) NOSOLID[i] = 1;
+});
+const isSolid = b => b !== 0 && !NOSOLID[b];
+const iconTile = id => BL[id].item || BL[id].tool || BL[id].armor ? BL[id].icon : BL[id].t[1];
+const TOOL_MUL = { 1: 2, 2: 4, 3: 6, 4: 8 };
+const TOOL_FOR_CAT = { stone: 'pickaxe', wood: 'axe', dirt: 'shovel' };
+const TIER_NAMES = { 1: 'wooden', 2: 'stone', 3: 'iron', 4: 'diamond' };
+
+/* Crafting-table recipes. `shape` rows are matched like Minecraft: the pattern can sit
+   anywhere in the 3x3 grid and may be mirrored. `less` = shapeless, one item per slot. */
+const RECIPES = [
+  { out:[8,4], less:[6] }, { out:[8,4], less:[26] }, { out:[8,4], less:[28] },
+  { out:[114,4], shape:['P','P'], key:{ P:8 } },
+  { out:[22,4], shape:['SS','SS'], key:{ S:3 } },
+  { out:[30,1], shape:['SS','SS'], key:{ S:4 } },
+  { out:[18,1], shape:['SS','SS'], key:{ S:113 } },
+  { out:[23,1], shape:['PPP','PPP'], key:{ P:8 } },
+  { out:[24,1], less:[9, 7] },
+  { out:[21,1], less:[12, 12] },
+  { out:[37,1], shape:['GSG','SGS','GSG'], key:{ G:120, S:4 } },
+  { out:[51,1], shape:['CCC','C C','CCC'], key:{ C:9 } },
+  { out:[138,1], shape:['I I',' I '], key:{ I:115 } },
+  { out:[142,1], shape:[' I','I '], key:{ I:115 } },
+  { out:[143,1], less:[115, 110] },
+  { out:[59,1], less:[58, 63] },
+  { out:[60,1], shape:['PP','PP'], key:{ P:8 } },
+  { out:[61,1], shape:['PPP','P P','PPP'], key:{ P:8 } },
+  { out:[62,3], less:[114,114,114,114,114,114,114] },
+  { out:[63,4], less:[110,114] },
+  { out:[64,3], shape:['PP','PP','PP'], key:{ P:8 } },
+  { out:[66,3], shape:['II','II','II'], key:{ I:115 } },
+  { out:[68,2], shape:['PPP','PPP'], key:{ P:8 } },
+  { out:[70,1], shape:['S','C'], key:{ S:114, C:9 } },
+  { out:[71,1], less:[8] },
+  { out:[72,1], less:[9] },
+  { out:[73,1], shape:['PP'], key:{ P:8 } },
+  { out:[74,1], shape:['CC'], key:{ C:9 } },
+  { out:[75,1], shape:['WWW','PPP'], key:{ W:18, P:8 } },
+  { out:[148,3], less:[82,82,82] },
+  { out:[149,1], less:[148,148,148,111] },
+  { out:[150,1], less:[82] },
+  { out:[151,1], shape:['WWW'], key:{ W:152 } },
+  { out:[163,3], less:[10,10,10] },
+  { out:[164,1], less:[146,150,78] },
+  { out:[165,1], less:[157,116] },
+  { out:[161,1], less:[78,79] },
+  { out:[162,1], shape:['GGG','GAG','GGG'], key:{ G:116, A:100 } },
+  { out:[156,1], shape:['GGG','GPG','GGG'], key:{ G:116, P:153 } },
+  { out:[166,1], less:[114,114,114,113,113] },
+  { out:[167,1], less:[114,114,114,113,113,113] },
+  { out:[168,4], less:[110,114,112] },
+];
+[[8, 122], [9, 126], [115, 130], [117, 134]].forEach(([mat, base]) => {
+  const key = { M: mat, S: 114 };
+  RECIPES.push(
+    { out:[base, 1], shape:['MMM',' S ',' S '], key },
+    { out:[base + 1, 1], shape:['MM','MS',' S'], key },
+    { out:[base + 2, 1], shape:['M','S','S'], key },
+    { out:[base + 3, 1], shape:['M','M','S'], key },
+  );
+});
+[[111, 169], [115, 177], [116, 181], [117, 185]].forEach(([mat, base]) => {
+  const key = { M: mat };
+  RECIPES.push(
+    { out:[base, 1], shape:['MMM', 'M M'], key },
+    { out:[base + 1, 1], shape:['M M', 'MMM', 'MMM'], key },
+    { out:[base + 2, 1], shape:['MMM', 'M M', 'M M'], key },
+    { out:[base + 3, 1], shape:['M M', 'M M'], key },
+  );
+});
+function recipeNeeds(r) {
+  const need = {};
+  if (r.less) r.less.forEach(id => need[id] = (need[id] || 0) + 1);
+  else r.shape.forEach(row => [...row].forEach(ch => { if (ch !== ' ') need[r.key[ch]] = (need[r.key[ch]] || 0) + 1; }));
+  return need;
+}
+/* Furnace/cooking recipes (instant list, fuelled by a plank) */
+const SMELT_RECIPES = [
+  { out:[102,1], inp:[[101,1],[8,1]] }, { out:[104,1], inp:[[103,1],[8,1]] },
+  { out:[106,1], inp:[[105,1],[8,1]] }, { out:[108,1], inp:[[107,1],[8,1]] },
+  { out:[10,1], inp:[[4,1],[8,1]] }, { out:[3,1], inp:[[9,1],[8,1]] },
+  { out:[11,2], inp:[[36,1],[8,1]] }, { out:[32,1], inp:[[36,1],[110,1]] },
+  { out:[154,1], inp:[[153,1],[8,1]] }, { out:[160,1], inp:[[159,1],[8,1]] },
+  { out:[118,1], inp:[[45,1],[8,1]] },
+];
+
+/* ================= biomes ================= */
+const OCEAN = 0, BEACH = 1, PLAINS = 2, FOREST = 3, DESERT = 4, SAVANNA = 5, BADLANDS = 6, JUNGLE = 7, SWAMP = 8, TAIGA = 9, SNOWY = 10, MOUNT = 11, FROZEN = 12;
+const BIOME_NAMES = ['Ocean', 'Beach', 'Plains', 'Forest', 'Desert', 'Savanna', 'Badlands', 'Jungle', 'Swamp', 'Taiga', 'Snowy Plains', 'Mountains', 'Frozen Ocean'];
+const TINT = [[1,1,1],[1,1,1],[1,1,1],[.82,.92,.82],[1.4,1,.8],[1.42,1.02,.78],[1.4,1,.8],[.75,1.06,.55],[.8,.72,.6],[.85,.9,1.05],[1,1,1.15],[.9,.95,1],[1,1,1.15]];
+const WTINT = [[1,1,1],[1,1,1],[1,1,1],[1,1,1],[1,1,1],[1,1,1],[1,1,1],[.9,1.05,.95],[.6,.78,.55],[.85,.95,1],[.9,1,1.1],[1,1,1],[.9,1,1.1]];
+const BANDS = [32, 32, 33, 32, 34, 32, 33, 32, 32, 34];
+
+/* ================= noise ================= */
+let seedI = 1;
+function ih(x, y, z) {
+  let h = (seedI + Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(z | 0, 1274126177)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h = Math.imul(h ^ (h >>> 15), 2246822519);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+const sm = t => t * t * (3 - 2 * t);
+function n2(x, z) {
+  const xi = Math.floor(x), zi = Math.floor(z), u = sm(x - xi), w = sm(z - zi);
+  const a = ih(xi, 0, zi), b = ih(xi + 1, 0, zi), c = ih(xi, 0, zi + 1), d = ih(xi + 1, 0, zi + 1);
+  const ab = a + (b - a) * u, cd = c + (d - c) * u;
+  return ab + (cd - ab) * w;
+}
+function fbm2(x, z, o) {
+  let s = 0, a = 1, n = 0, f = 1;
+  for (let i = 0; i < o; i++) { s += (n2(x * f + i * 17.3, z * f - i * 9.1) * 2 - 1) * a; n += a; a *= .5; f *= 2; }
+  return s / n;
+}
+function n3(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const u = sm(x - xi), v = sm(y - yi), w = sm(z - zi), Y = yi + 7777;
+  const c000 = ih(xi, Y, zi), c100 = ih(xi + 1, Y, zi), c010 = ih(xi, Y + 1, zi), c110 = ih(xi + 1, Y + 1, zi);
+  const c001 = ih(xi, Y, zi + 1), c101 = ih(xi + 1, Y, zi + 1), c011 = ih(xi, Y + 1, zi + 1), c111 = ih(xi + 1, Y + 1, zi + 1);
+  const x00 = c000 + (c100 - c000) * u, x10 = c010 + (c110 - c010) * u, x01 = c001 + (c101 - c001) * u, x11 = c011 + (c111 - c011) * u;
+  const y0 = x00 + (x10 - x00) * v, y1 = x01 + (x11 - x01) * v;
+  return y0 + (y1 - y0) * w;
+}
+let TH = 0, TB = 0;
+function terrain(x, z, dim = DIM_OVERWORLD) {
+  if (dim === DIM_NETHER) {
+    const c = fbm2(x * .005, z * .005, 3);
+    const h = 20 + c * 60;
+    TH = Math.floor(h); TB = PLAINS;
+    return;
+  }
+  if (dim === DIM_END) {
+    const h = 50 + fbm2(x * .003, z * .003, 2) * 30;
+    TH = Math.floor(h); TB = PLAINS;
+    return;
+  }
+  const c = fbm2(x * .0035, z * .0035, 4);
+  const hills = fbm2(x * .018 + 50, z * .018, 3);
+  const mm = Math.max(0, fbm2(x * .006 - 90, z * .006 + 40, 3));
+  const temp = fbm2(x * .0017 + 300, z * .0017 - 200, 2), hum = fbm2(x * .0017 - 700, z * .0017 + 150, 2);
+  const mount = mm * mm * 75;
+  let h = SEA + 2 + c * 22 + hills * 6 + mount, b;
+  if (mount > 16) b = MOUNT;
+  else if (temp < -.2) b = hum > 0 ? TAIGA : SNOWY;
+  else if (temp > .2) b = hum < -.18 ? BADLANDS : hum < .05 ? DESERT : hum < .22 ? SAVANNA : JUNGLE;
+  else b = hum > .2 ? SWAMP : hum > -.02 ? FOREST : PLAINS;
+  if (b === SWAMP) h = h * .35 + (SEA + .6) * .65;
+  if (b === BADLANDS && h > SEA + 3) h = SEA + 3 + Math.floor((h - SEA - 3) * 1.5 / 4) * 4;
+  h = Math.max(6, Math.min(CH - 14, Math.floor(h)));
+  if (h < SEA - 1) b = temp < -.2 ? FROZEN : OCEAN;
+  else if (h <= SEA + 1 && b !== SWAMP && b !== MOUNT) b = temp < -.2 ? SNOWY : BEACH;
+  TH = h; TB = b;
+}
+
+/* ================= texture atlas ================= */
+const tileAvg = [];
+function makeAtlas() {
+  const cv = document.createElement('canvas'); cv.width = COLS * TS; cv.height = ROWS * TS;
+  const g = cv.getContext('2d'); const img = g.createImageData(cv.width, cv.height);
+  let s = 987654;
+  const R = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+  const cl = v => Math.max(0, Math.min(255, v | 0));
+  const v = (c, amt) => { const k = (R() - .5) * amt; return [c[0] + k, c[1] + k, c[2] + k]; };
+  const dk = (c, k) => [c[0] - k, c[1] - k, c[2] - k];
+  function fill(t, fn) {
+    let sr = 0, sg = 0, sb = 0, n = 0;
+    for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+      const c = fn(x, y) || [0, 0, 0, 0]; const a = c[3] === undefined ? 255 : c[3];
+      const px = (t % COLS) * TS + x, py = Math.floor(t / COLS) * TS + y, i = (py * cv.width + px) * 4;
+      img.data[i] = cl(c[0]); img.data[i + 1] = cl(c[1]); img.data[i + 2] = cl(c[2]); img.data[i + 3] = a;
+      if (a > 100) { sr += c[0]; sg += c[1]; sb += c[2]; n++; }
+    }
+    tileAvg[t] = n ? [sr / n, sg / n, sb / n] : [200, 200, 200];
+  }
+  const GR = [104, 172, 62], DI = [134, 96, 67], ST = [124, 124, 124];
+  const jag = () => { const j = []; for (let x = 0; x < TS; x++) j[x] = 3 + Math.floor(R() * 3); return j; };
+  const pts = []; for (let i = 0; i < 9; i++) pts.push([R() * 16, R() * 16]);
+  const cob = (x, y) => {
+    let d1 = 99, d2 = 99;
+    for (const p of pts) for (let ox = -16; ox <= 16; ox += 16) for (let oy = -16; oy <= 16; oy += 16) {
+      const d = Math.hypot(x + .5 - p[0] - ox, y + .5 - p[1] - oy);
+      if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
+    }
+    return d2 - d1 < 1.1 ? v([70, 70, 70], 12) : v([128, 128, 128], 26);
+  };
+  const stonePix = () => { const c = v(ST, 22); return R() < .1 ? dk(c, 22) : c; };
+  const ore = (t, col) => {
+    const spots = []; for (let i = 0; i < 6; i++) spots.push([1 + R() * 13, 1 + R() * 13]);
+    fill(t, (x, y) => { for (const p of spots) if (Math.hypot(x - p[0], y - p[1]) < 1.3 && R() < .85) return v(col, 30); return stonePix(); });
+  };
+  const rings = (t, bark, light, dark) => fill(t, (x, y) => { const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); if (d > 6.5) return v(bark, 12); return Math.floor(d) % 2 ? v(light, 10) : v(dark, 10); });
+  const leaves = (t, col, holes) => fill(t, () => R() < holes ? null : v(col, 40));
+  const ell = (x, y, cx, cy, rx, ry) => ((x + .5 - cx) / rx) ** 2 + ((y + .5 - cy) / ry) ** 2;
+  const drum = (t, col) => fill(t, (x, y) => {
+    if (ell(x, y, 7, 7, 5.2, 4.4) <= 1) return v(col, 18);
+    const onBone = Math.abs((x - y)) <= 1 && x >= 9 && x <= 13;
+    if (onBone) return [236, 230, 214];
+    if (ell(x, y, 13.5, 13.5, 1.6, 1.6) <= 1) return [236, 230, 214];
+    return null;
+  });
+  const meat = (t, col, fat, marb) => fill(t, (x, y) => {
+    const e = ell(x, y, 8, 8.5, 6.5, 4.6); if (e > 1) return null;
+    if (e > .62) return v(fat, 10);
+    if (marb && R() < .12) return v(marb, 10);
+    return v(col, 18);
+  });
+  // blocks
+  fill(0, () => v(GR, 34)); fill(1, (x, y) => { let j = jag(); return y < j[x] ? v(GR, 34) : v(DI, 28); });
+  fill(2, () => { const c = v(DI, 28); return R() < .06 ? dk(c, 25) : c; });
+  fill(3, stonePix); fill(4, () => v([220, 208, 160], 16));
+  fill(5, (x, y) => { const w = Math.sin((x + y * .6) * .9) * 10 + R() * 8; return [44 + w, 92 + w, 205 + w, 200]; });
+  fill(6, (x) => { const c = v([104, 80, 48], 16); return (x % 4 === 0 || (x % 4 === 2 && R() < .3)) ? dk(c, 28) : c; });
+  rings(7, [104, 80, 48], [178, 146, 94], [150, 118, 72]);
+  leaves(8, [70, 138, 48], .2);
+  fill(9, (x, y) => { const c = v([170, 136, 84], 14); if (y % 4 === 3) return dk(c, 42); if (x === (Math.floor(y / 4) * 5 + 3) % 16) return dk(c, 28); return c; });
+  fill(10, cob); fill(11, (x, y) => {
+    if (x === 0 || y === 0 || x === 15 || y === 15) return [214, 236, 242, 255];
+    if ((x - y === 4 || x - y === 5) && x > 3 && x < 12) return [245, 252, 255, 255];
+    return null;
+  });
+  fill(12, (x, y) => { const off = Math.floor(y / 4) % 2 ? 4 : 0; if (y % 4 === 3 || (x + off) % 8 === 7) return v([192, 186, 176], 10); return v([152, 64, 48], 20); });
+  fill(13, () => v([240, 246, 250], 10));
+  fill(14, (x, y) => { let j = jag(); return y < j[x] ? v([240, 246, 250], 10) : v(DI, 28); });
+  ore(15, [28, 28, 28]); ore(16, [220, 176, 146]); ore(17, [250, 214, 60]); ore(18, [96, 232, 222]);
+  fill(19, () => { const r = R(); return r < .3 ? v([30, 30, 30], 20) : r < .7 ? v([80, 80, 80], 30) : v([120, 120, 120], 30); });
+  fill(20, (x, y) => { const c = v([234, 234, 230], 12); return (x + y * 3) % 7 === 0 ? dk(c, 14) : c; });
+  fill(21, () => { const r = R(); return r < .33 ? v([100, 94, 90], 20) : r < .66 ? v([142, 134, 128], 20) : v([172, 162, 156], 20); });
+  fill(22, (x, y) => { let c = v([66, 140, 50], 16); if (x % 4 === 1) c = dk(c, 22); if (x % 4 === 1 && y % 5 === 2) return [226, 222, 180]; if (x === 0 || x === 15) c = dk(c, 30); return c; });
+  fill(23, (x, y) => { const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return d > 6.5 ? v([56, 120, 44], 10) : v([98, 170, 76], 16); });
+  fill(24, (x, y) => { const off = Math.floor(y / 8) % 2 ? 4 : 0; if (y % 8 === 7 || (x + off) % 8 === 7) return v([84, 84, 84], 8); if (y % 8 === 0 || (x + off) % 8 === 0) return v([156, 156, 156], 8); return v([122, 122, 122], 14); });
+  fill(25, (x, y) => {
+    if (y < 2 || y > 13 || y === 7 || y === 8) return v([170, 136, 84], 14);
+    const bookCols = [[150, 40, 40], [40, 72, 150], [40, 116, 52], [160, 124, 40], [110, 52, 120]];
+    const bookOf = []; for (let x = 0; x < 16; x++) bookOf[x] = Math.floor(R() * 5);
+    const c = bookCols[bookOf[x >> 1]]; return x % 2 ? dk(v(c, 14), 20) : v(c, 14);
+  });
+  fill(26, (x, y) => { const c = cob(x, y); return R() < .3 ? v([74, 124, 52], 24) : c; });
+  fill(27, () => R() < .07 ? v([90, 60, 130], 20) : v([22, 16, 34], 14));
+  fill(28, (x, y) => { const off = (y * 5) % 11; if (y % 5 === 2 && x >= off && x < off + 4) return [44, 44, 40]; return R() < .04 ? [60, 60, 56] : v([218, 216, 206], 12); });
+  rings(29, [214, 212, 200], [214, 190, 140], [190, 164, 116]);
+  leaves(30, [118, 162, 78], .2);
+  fill(31, (x) => { const c = v([74, 52, 32], 14); return x % 3 === 0 ? dk(c, 18) : c; });
+  rings(32, [74, 52, 32], [150, 112, 72], [118, 86, 54]);
+  leaves(33, [46, 86, 58], .15);
+  fill(34, () => v([220, 208, 162], 10));
+  fill(35, (x, y) => y < 3 ? v([224, 212, 166], 8) : y % 5 === 4 ? v([190, 176, 128], 8) : v([212, 198, 150], 12));
+  fill(36, () => v([190, 102, 52], 18));
+  fill(37, () => v([164, 88, 60], 14));
+  fill(38, (x, y) => { const c = v([115, 66, 58], 18); return R() < .06 ? dk(c, 30) : c; });
+  fill(39, () => v([140, 110, 80], 20));
+  fill(40, (x, y) => (x + y) % 9 === 0 ? [206, 228, 255] : v([150, 192, 246], 14));
+  fill(41, () => v([160, 166, 178], 10));
+  // items 42-55 (original food/material icons)
+  fill(42, (x, y) => {
+    if (x === 8 && y >= 1 && y <= 4) return [96, 64, 30];
+    if (y >= 2 && y <= 3 && x >= 9 && x <= 11) return [70, 150, 50];
+    if (ell(x, y, 8, 9.5, 5.6, 5.4) <= 1) return ell(x, y, 6, 7.5, 1.6, 1.4) <= 1 ? [255, 160, 160] : v([200 - x * 4, 30, 30], 14);
+    return null;
+  });
+  meat(43, [212, 84, 84], [240, 214, 204]);
+  meat(44, [146, 86, 44], [112, 64, 32]);
+  meat(45, [240, 156, 156], [250, 230, 226]);
+  meat(46, [196, 124, 70], [160, 96, 50]);
+  meat(47, [184, 42, 42], [236, 210, 204], [240, 220, 216]);
+  meat(48, [124, 72, 40], [92, 52, 28], [90, 50, 26]);
+  drum(49, [242, 192, 172]);
+  drum(50, [204, 132, 62]);
+  fill(51, (x, y) => { const e = ell(x, y, 8, 8.5, 6, 5) + (R() - .5) * .3; if (e > 1) return null; return R() < .25 ? v([92, 132, 60], 14) : v([124, 104, 64], 18); });
+  fill(52, (x, y) => { const e = ell(x, y, 8, 8.5, 5.5, 5) + (R() - .5) * .25; if (e > 1) return null; return R() < .15 ? [84, 84, 84] : v([32, 32, 32], 12); });
+  fill(53, (x, y) => { if (x < 3 || x > 12 || y < 2 || y > 13 || ((x === 3 || x === 12) && (y === 2 || y === 13))) return null; if ((x === 4 || x === 11 || y === 3 || y === 12) && (x + y) % 2) return [220, 190, 150]; return v([150, 92, 50], 16); });
+  fill(54, (x, y) => { const d = Math.abs((x - 3) - (13 - y)) / 1.414; const along = x + (15 - y); if (along < 3 || along > 26) return null; if (d < .75) return [150, 150, 150]; if (d < 2.4 && along > 6) return v([240, 240, 236], 10); return null; });
+  fill(55, (x, y) => { const w = 8 + Math.round(3 * Math.sin(x * .7)); return (y === w || y === w + 1 && x % 3 === 0) ? [236, 236, 236] : null; });
+  // blocks 56-69 (new full-block tileable textures)
+  fill(56, (x, y) => { const bx = Math.floor(x / 8), by = Math.floor(y / 8); const stripe = (bx + by) % 2; return stripe ? v([206, 46, 40], 14) : (x % 8 < 2 || x % 8 > 5 || y % 8 < 2 || y % 8 > 5 ? [40, 30, 26] : v([206, 46, 40], 14)); });
+  fill(57, (x, y) => { const c = v([120, 70, 58], 20); return R() < .18 ? dk(c, 24) : c; });
+  fill(58, (x, y) => { const c = v([120, 96, 74], 16); const e1 = ell(x % 8, y % 8, 4, 4, 1.6, 1.1); return e1 <= 1 ? dk(c, 30) : c; });
+  fill(59, (x, y) => { const off = Math.floor(y / 4) % 2 ? 4 : 0; if (y % 4 === 3 || (x + off) % 8 === 7) return v([56, 20, 22], 8); return v([94, 38, 36], 16); });
+  fill(60, (x, y) => { const w = Math.sin((x + y * .5) * .8) * 30 + R() * 20; return [220 + w * .4, 90 + w * .6, 20 + w * .3]; });
+  fill(61, () => v([220, 216, 168], 14));
+  fill(62, (x, y) => { const c = v([168, 118, 178], 16); return R() < .08 ? dk(c, 30) : c; });
+  fill(63, (x, y) => { const c = v([78, 78, 84], 20); return R() < .12 ? dk(c, 26) : c; });
+  fill(64, (x, y) => { const spots = [[4,4],[11,6],[7,12],[13,13],[2,10]]; for (const p of spots) if (Math.hypot(x - p[0], y - p[1]) < 1.6 && R() < .8) return v([206, 132, 78], 22); return v([124, 124, 124], 22); });
+  fill(65, (x, y) => { const c = v([64, 64, 70], 18); return R() < .1 ? dk(c, 22) : c; });
+  fill(66, (x, y) => v(R() < .12 ? [70, 70, 74] : [222, 220, 214], 16));
+  fill(67, (x, y) => v(R() < .1 ? [90, 50, 46] : [214, 186, 178], 16));
+  fill(68, (x, y) => { const c = v([150, 150, 148], 18); return R() < .1 ? dk(c, 20) : c; });
+  fill(69, (x, y) => { const c = v([120, 126, 112], 18); return R() < .1 ? dk(c, 20) : c; });
+  // items 70-97 (tools, ingots, buckets)
+  fill(70, (x, y) => Math.abs((x - y) - 1) < 1.4 && x > 3 && x < 13 && y > 3 && y < 13 ? v([146, 108, 66], 16) : null);
+  const ingot = (t, col) => fill(t, (x, y) => { if (y < 6 || y > 11) return null; const inset = y < 8 ? 2 : y > 9 ? 2 : 0; if (x < 3 + inset || x > 12 - inset) return null; return (y === 6 || y === 11) ? dk(v(col, 8), 20) : v(col, 14); });
+  ingot(71, [216, 216, 220]); ingot(72, [232, 200, 76]); ingot(74, [212, 128, 78]);
+  fill(73, (x, y) => ell(x, y, 8, 8, 4.6, 5.6) <= 1 && Math.abs(x - 8) < 4.6 - Math.abs(y - 8) * .15 ? v([100, 226, 226], 20) : null);
+  fill(75, (x, y) => { const e = ell(x, y, 8, 8.5, 5, 4.6); if (e > 1) return null; return R() < .5 ? v([200, 30, 30], 20) : v([150, 15, 15], 16); });
+  fill(76, (x, y) => { const e = ell(x, y, 8, 8.5, 5, 4.6); if (e > 1) return null; return R() < .5 ? v([90, 88, 84], 18) : v([50, 48, 46], 14); });
+  fill(77, (x, y) => ell(x, y, 8, 8, 4.2, 4.2) <= 1 ? (R() < .2 ? [30, 60, 55] : v([40, 150, 130], 22)) : null);
+  const toolIcon = (t, headCol, kind) => fill(t, (x, y) => {
+    const along = Math.abs((x - y) - 3) < 1.15 && x > 2 && x < 11 && y > 4 && y < 13;
+    if (kind === 'pickaxe' && Math.abs((x + y) - 9) < 2.1 && x > 3 && x < 14 && y < 9) return v(headCol, 14);
+    if (kind === 'axe' && ell(x, y, 10, 5, 3.4, 3) <= 1) return v(headCol, 14);
+    if (kind === 'shovel' && ell(x, y, 10.5, 4, 2.2, 3) <= 1) return v(headCol, 14);
+    if (kind === 'sword') { if (x >= 8 && x <= 10 && y >= 1 && y <= 9) return v(headCol, 10); if (y === 10 && x >= 6 && x <= 12) return [70, 70, 70]; }
+    if (along) return v([132, 96, 58], 14);
+    return null;
+  });
+  const WOOD = [180, 150, 100], STONE_C = [160, 160, 160], IRON_C = [230, 230, 232], DIAM_C = [110, 226, 226];
+  toolIcon(78, WOOD, 'pickaxe'); toolIcon(79, WOOD, 'axe'); toolIcon(80, WOOD, 'shovel'); toolIcon(81, WOOD, 'sword');
+  toolIcon(82, STONE_C, 'pickaxe'); toolIcon(83, STONE_C, 'axe'); toolIcon(84, STONE_C, 'shovel'); toolIcon(85, STONE_C, 'sword');
+  toolIcon(86, IRON_C, 'pickaxe'); toolIcon(87, IRON_C, 'axe'); toolIcon(88, IRON_C, 'shovel'); toolIcon(89, IRON_C, 'sword');
+  toolIcon(90, DIAM_C, 'pickaxe'); toolIcon(91, DIAM_C, 'axe'); toolIcon(92, DIAM_C, 'shovel'); toolIcon(93, DIAM_C, 'sword');
+  const bucketIcon = (t, liquid) => fill(t, (x, y) => {
+    if (y < 3 || y > 12) return null;
+    const k = (y - 3) / 9, w = 5.2 - k * 1.2, cx = 8;
+    if (x < cx - w || x > cx + w) return null;
+    if (x < cx - w + 1.3 || x > cx + w - 1.3 || y === 12) return [90, 92, 98];
+    if (liquid && y > 5) return v(liquid, 14);
+    return [176, 178, 184];
+  });
+  bucketIcon(94, null); bucketIcon(95, [50, 96, 210]); bucketIcon(96, [230, 100, 30]); bucketIcon(97, [244, 244, 236]);
+  fill(98, (x, y) => { const c = v([132, 132, 132], 14); if (x >= 5 && x <= 10 && y >= 8 && y <= 13) return dk(c, x === 5 || x === 10 || y === 8 || y === 13 ? 40 : 60); return R() < .08 ? dk(c, 20) : c; });
+  fill(99, (x, y) => { const c = v([140, 140, 140], 14); return R() < .08 ? dk(c, 20) : c; });
+  fill(100, (x, y) => {
+    const onBlade = (x >= 2 && x <= 9 && Math.abs(x - y) <= 1) || (x >= 6 && x <= 13 && Math.abs((15 - y) - (x - 6)) <= 1);
+    if (onBlade) return [210, 210, 216];
+    if ((x === 4 && y === 4) || (x === 11 && y === 11)) return [70, 60, 30];
+    return null;
+  });
+  fill(101, (x, y) => {
+    if (Math.abs((x - 3) - (13 - y)) < 1.2 && x > 2 && x < 12) return [190, 190, 196];
+    if (Math.abs((x - 12) - (2 - y)) < 1.2 && x > 6 && x < 14 && y < 10) return [90, 60, 30];
+    return null;
+  });
+  // blocks 102-139 (ores, wood, farm blocks, furniture, doors, redstone-lite, plants, skulls)
+  ore(102, [190, 30, 30]); ore(103, [40, 70, 200]);
+  fill(104, (x, y) => { const c = v([246, 220, 130], 16); return R() < .15 ? dk(c, 30) : c; });
+  fill(105, (x) => { const c = v([120, 108, 70], 16); return (x % 4 === 0 || (x % 4 === 2 && R() < .3)) ? dk(c, 26) : c; });
+  rings(106, [120, 108, 70], [176, 168, 120], [150, 140, 96]);
+  leaves(107, [58, 128, 40], .12);
+  fill(108, (x, y) => { const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return d > 6.8 ? [64, 118, 40] : (Math.floor(d) % 2 ? v([90, 160, 60], 12) : v([70, 140, 46], 12)); });
+  fill(109, (x, y) => { const c = v([84, 150, 54], 14); return x % 4 === 0 ? dk(c, 30) : c; });
+  fill(110, (x, y) => { const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5)); return d > 6.8 ? v([150, 96, 20], 14) : v([196, 132, 30], 14); });
+  fill(111, (x, y) => { const c = v([214, 140, 30], 14); return x % 4 === 0 ? dk(c, 26) : c; });
+  fill(112, (x, y) => {
+    const eye = (ex) => Math.abs(x - ex) < 1.6 && y > 4 && y < 7 && Math.abs(x - ex) + Math.abs(y - 5.5) < 2;
+    if (eye(5) || eye(11) || (y > 9 && y < 12 && x > 4 && x < 12 && (x + y) % 2 === 0)) return [255, 210, 90];
+    const c = v([214, 140, 30], 14); return x % 4 === 0 ? dk(c, 26) : c;
+  });
+  fill(113, (x, y) => { const c = v([170, 136, 84], 14); if ((x === 4 || x === 11) && y > 2 && y < 13) return dk(c, 30); if (y === 7 || y === 8) return dk(c, 16); return c; });
+  fill(114, (x, y) => { const c = v([150, 112, 66], 16); if (x > 6 && x < 9 && y > 6 && y < 9) return [70, 60, 40]; if (y % 7 === 0) return dk(c, 22); return c; });
+  fill(115, (x, y) => { const c = v([150, 112, 66], 14); return (y % 5 === 1 || x === 2 || x === 13) ? dk(c, 30) : c; });
+  fill(116, (x, y) => {
+    if (y < 6 && Math.abs(x - 8) < 3 - y * .3) return v([250, 180 + R() * 40, 40], 30);
+    if (x > 6 && x < 9 && y >= 5 && y < 15) return [90, 62, 34];
+    return null;
+  });
+  fill(117, (x, y) => { const c = v([160, 122, 72], 14); if (x < 1 || x > 14 || y < 1) return dk(c, 30); if (x > 2 && x < 13 && y > 2 && y < 14 && (x + y) % 6 < 3) return dk(c, 14); return c; });
+  fill(118, (x, y) => { const c = v([176, 178, 184], 12); if ((x % 5 === 2) && (y % 5 === 2)) return dk(c, 40); if (x < 1 || x > 14 || y < 1 || y > 14) return dk(c, 24); return c; });
+  fill(119, (x, y) => { const c = v([160, 122, 72], 14); return (y % 3 === 0) ? dk(c, 26) : c; });
+  fill(120, (x, y) => {
+    if (x > 5 && x < 10 && y > 10 && y < 14) return [90, 90, 94];
+    if (Math.abs((x - 7) - (10 - y) * .6) < 1 && y >= 2 && y <= 11) return [150, 110, 60];
+    return null;
+  });
+  fill(121, (x, y) => { const c = v([196, 60, 60], 14); if (y < 3) return v([236, 224, 210], 14); return c; });
+  fill(122, (x, y) => { if (y < 10) return v([196, 60, 60], 14); return v([170, 136, 84], 14); });
+  const flower = (t, stem, petal, center) => fill(t, (x, y) => {
+    if (Math.abs(x - 8) < 1 && y > 9 && y < 15) return v(stem, 10);
+    const e = ell(x, y, 8, 7, 3.2, 3.2); if (e <= .18) return center;
+    if (e <= 1) return v(petal, 16);
+    return null;
+  });
+  flower(123, [70, 130, 50], [230, 200, 40], [200, 140, 30]);
+  flower(124, [70, 130, 50], [210, 40, 50], [140, 20, 30]);
+  fill(125, (x, y) => { if (Math.abs(x - 8) < 1 && y > 8 && y < 15) return [225, 214, 200]; const e = ell(x, y, 8, 7, 3.6, 2.8); return e <= 1 ? v([150, 108, 76], 16) : null; });
+  fill(126, (x, y) => {
+    if (Math.abs(x - 8) < 1 && y > 8 && y < 15) return [225, 214, 200];
+    const e = ell(x, y, 8, 7, 3.6, 2.8); if (e > 1) return null;
+    return (Math.sin(x * 3 + y * 5) > .6) ? [235, 235, 228] : v([196, 40, 36], 16);
+  });
+  fill(127, (x, y) => {
+    const along = Math.abs((x - 8) - (y - 15) * .4) < 1 || Math.abs((x - 8) + (y - 15) * .5) < 1;
+    return (y < 15 && y > 1 && along) ? v([120, 92, 58], 14) : null;
+  });
+  fill(128, (x, y) => {
+    const b1 = Math.abs((x - 4) - (15 - y) * .15) < 1, b2 = Math.abs((x - 8) - (15 - y) * -.1) < 1, b3 = Math.abs((x - 12) - (15 - y) * .18) < 1;
+    return (y > 2 && (b1 || b2 || b3)) ? v([70, 150, 50], 18) : null;
+  });
+  fill(129, (x, y) => (x > 5 && x < 11) ? v([80, 168, 70], 16) : null);
+  fill(130, (x, y) => { const e = ell(x, y, 8, 9, 3, 3.6); if (e > 1) return null; return R() < .3 ? [120, 30, 30] : v([170, 50, 50], 16); });
+  const sapling = (t, col) => fill(t, (x, y) => {
+    if (Math.abs(x - 8) < 1 && y > 10 && y < 15) return [110, 84, 52];
+    const e = ell(x, y, 8, 8, 3.4, 4); return e <= 1 && (x + y) % 2 === 0 ? v(col, 20) : null;
+  });
+  sapling(131, [80, 150, 56]); sapling(132, [170, 190, 110]); sapling(133, [46, 90, 60]); sapling(134, [56, 140, 40]);
+  fill(135, (x, y) => (Math.abs((x - 8) % 3) < 1 && y > 1) ? v([50, 110, 40], 20) : null);
+  const skull = (t, col) => fill(t, (x, y) => {
+    const e = ell(x, y, 8, 7, 4, 4.4); if (e > 1) return null;
+    if ((Math.abs(x - 6) < 1 || Math.abs(x - 10) < 1) && y > 6 && y < 9) return [10, 10, 10];
+    return v(col, 12);
+  });
+  skull(136, [235, 235, 228]); skull(137, [60, 58, 56]); skull(138, [110, 138, 92]); skull(139, [40, 120, 30]);
+  // items 140-164 (materials, food, fishing/bow gear)
+  fill(140, (x, y) => ell(x, y, 8, 8, 4, 4) <= 1 && (x + y * 2) % 5 < 3 ? v([30, 70, 210], 24) : null);
+  fill(141, (x, y) => Math.abs((x - y)) < 1.6 && x > 2 && x < 13 ? v([238, 232, 214], 16) : null);
+  fill(142, (x, y) => ell(x, y, 8, 8, 3.6, 4.4) <= 1 ? (ell(x, y, 8, 8, 1.4, 1.4) <= 1 ? [20, 20, 20] : v([150, 60, 160], 18)) : null);
+  fill(143, (x, y) => ell(x, y, 8, 9, 4.4, 4) <= 1 ? v([120, 210, 130], 18) : null);
+  fill(144, (x, y) => (x > 3 && x < 13 && y > 2 && y < 14) ? (y % 4 === 0 ? [220, 216, 200] : v([248, 244, 232], 8)) : null);
+  fill(145, (x, y) => { if (x < 2 || x > 13 || y < 3 || y > 12) return null; if (x < 4) return [130, 70, 40]; return v([236, 226, 200], 8); });
+  fill(146, (x, y) => R() < .55 && ell(x, y, 8, 8, 5, 5) <= 1 ? v([248, 248, 240], 30) : null);
+  fill(147, (x, y) => { const e = ell(x, y, 8, 8.5, 6, 4.4); if (e > 1) return null; return R() < .2 ? dk([196, 150, 90], 20) : v([196, 150, 90], 14); });
+  fill(148, (x, y) => Math.abs((x - 8) % 3 - 1) < 1 && y > 3 ? v([224, 196, 60], 18) : null);
+  fill(149, (x, y) => ell(x, y, 8, 8.5, 5, 6) <= 1 ? v([196, 150, 90], 16) : null);
+  fill(150, (x, y) => ell(x, y, 8, 8.5, 5, 6) <= 1 ? v([214, 168, 96], 14) : null);
+  fill(151, (x, y) => { const e = ell(x, y, 8, 8.5, 5, 6); if (e > 1) return null; return R() < .3 ? [90, 60, 130] : v([170, 130, 70], 16); });
+  fill(152, (x, y) => ell(x, y, 8, 8.5, 5, 6) <= 1 ? v([250, 200, 60], 16) : null);
+  fill(153, (x, y) => { const e = ell(x, y, 8, 8, 5, 4); if (e > 1) return null; return Math.abs(x - 8) < 1 ? [220, 40, 40] : v([90, 160, 60], 16); });
+  fill(154, (x, y) => (x > 2 && x < 13 && y > 3 && y < 12) ? v([224, 180, 120], 14) : null);
+  meat(155, [220, 210, 200], [200, 190, 180]);
+  meat(156, [206, 156, 100], [176, 120, 70]);
+  fill(157, (x, y) => ell(x, y, 8, 8, 5, 5) <= 1 ? v([150, 100, 200], 18) : null);
+  fill(158, (x, y) => { const e = ell(x, y, 8, 9, 6, 5.4); if (e > 1) return null; return R() < .25 ? [255, 230, 90] : v([224, 190, 70], 14); });
+  fill(159, (x, y) => (x > 5 && x < 11 && y > 2 && y < 14) ? [220, 236, 240, 190] : null);
+  fill(160, (x, y) => { const e = ell(x, y, 8, 8, 4, 4); if (e > 1) return null; return R() < .3 ? [90, 30, 40] : v([60, 20, 26], 12); });
+  fill(161, (x, y) => ell(x, y, 8, 8, 5, 5) <= 1 ? v([224, 200, 60], 18) : null);
+  fill(162, (x, y) => { const along = Math.abs((x - y)) < 1.3; if (along && x > 1 && x < 14) return [150, 100, 50]; if (x > 9 && x < 15 && y > 0 && y < 6 && (x + y) % 2) return [230, 230, 230]; return null; });
+  fill(163, (x, y) => { const along = Math.abs((x + y) - 15) < 1.3; if (along && x > 1 && x < 14) return [90, 70, 45]; if (Math.abs(x - 8) < 1 && y > 2 && y < 13) return [230, 230, 230]; return null; });
+  fill(164, (x, y) => { if (x > 6 && x < 9 && y > 1 && y < 14) return [150, 150, 150]; if (Math.abs((x - y)) < 1 && x > 2 && x < 13) return [90, 60, 34]; if (x > 9 && x < 13 && y > 1 && y < 5 && (x + y) % 2) return [220, 40, 40]; return null; });
+  // armor icons 174-193: helmet/chestplate/leggings/boots silhouette per material
+  const armorIcon = (t, col, piece) => fill(t, (x, y) => {
+    if (piece === 0 && ell(x, y, 8, 6, 4.4, 3.6) <= 1 && y < 8) return v(col, 14);
+    if (piece === 1 && x > 3 && x < 13 && y > 2 && y < 12) return v(col, 14);
+    if (piece === 2 && ((x > 3 && x < 7) || (x > 9 && x < 13)) && y > 2 && y < 14) return v(col, 14);
+    if (piece === 3 && ((x > 3 && x < 7) || (x > 9 && x < 13)) && y > 9 && y < 14) return v(col, 14);
+    return null;
+  });
+  [['Leather', [140, 90, 52]], ['Chainmail', [150, 150, 156]], ['Iron', [216, 216, 220]], ['Gold', [232, 200, 76]], ['Diamond', [110, 226, 226]]]
+    .forEach(([_, col], mi) => { for (let pi = 0; pi < 4; pi++) armorIcon([174, 178, 182, 186, 190][mi] + pi, col, pi); });
+  g.putImageData(img, 0, 0);
+  return cv;
+}
+
+/* ================= renderer / scene ================= */
+const canvas = $('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x87b8ff, 40, 70);
+scene.background = new THREE.Color(0x87b8ff);
+const camera = new THREE.PerspectiveCamera(75, 1, .08, 1200);
+camera.rotation.order = 'YXZ';
+function resize() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', resize); resize();
+
+const atlas = makeAtlas();
+const atlasURL = atlas.toDataURL();
+const tex = new THREE.CanvasTexture(atlas);
+tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
+const matOpaque = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, alphaTest: .5 });
+const matWater = new THREE.MeshBasicMaterial({ map: tex, vertexColors: true, transparent: true, opacity: .78, depthWrite: false, side: THREE.DoubleSide });
+
+function discTex(fn) { const c = document.createElement('canvas'); c.width = c.height = 32; fn(c.getContext('2d')); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; return t; }
+const sunTex = discTex(g => { g.fillStyle = '#fff6b0'; g.fillRect(4, 4, 24, 24); g.fillStyle = '#ffe36a'; g.fillRect(8, 8, 16, 16); });
+const moonTex = discTex(g => { g.fillStyle = '#dfe6f0'; g.fillRect(6, 6, 20, 20); g.fillStyle = '#b8c1cf'; g.fillRect(10, 10, 5, 5); g.fillRect(18, 16, 4, 4); g.fillRect(12, 20, 3, 3); });
+const skyMat = t => new THREE.MeshBasicMaterial({ map: t, transparent: true, fog: false, depthWrite: false });
+const sun = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), skyMat(sunTex));
+const moon = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), skyMat(moonTex));
+sun.renderOrder = moon.renderOrder = -1;
+scene.add(sun, moon);
+const starGeo = new THREE.BufferGeometry(); { const a = []; for (let i = 0; i < 700; i++) { const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, r = Math.sqrt(1 - u * u); a.push(r * Math.cos(th) * 500, Math.abs(u) * 500, r * Math.sin(th) * 500); } starGeo.setAttribute('position', new THREE.Float32BufferAttribute(a, 3)); }
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, depthWrite: false });
+const stars = new THREE.Points(starGeo, starMat); stars.renderOrder = -2; scene.add(stars);
+const cloudTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  for (let i = 0; i < 26; i++) { const x = Math.random() * 64 | 0, y = Math.random() * 64 | 0, w = 3 + Math.random() * 9 | 0, h = 2 + Math.random() * 5 | 0;
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x, y, w, h); g.fillRect(x - 64, y, w, h); }
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(8, 8); return t;
+})();
+const cloudMat = new THREE.MeshBasicMaterial({ map: cloudTex, transparent: true, opacity: .85, depthWrite: false, side: THREE.DoubleSide });
+const clouds = new THREE.Mesh(new THREE.PlaneGeometry(2000, 2000), cloudMat);
+clouds.rotation.x = -Math.PI / 2; scene.add(clouds);
+const selBox = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.004, 1.004, 1.004)), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: .7 }));
+selBox.visible = false; scene.add(selBox);
+
+/* ================= player model & skin ================= */
+const SKIN_SIZE = 16;
+const DEFAULT_SKIN = {
+  head: () => '#c98a5e',
+  body: (x, y) => y < 3 ? '#3a5fc9' : '#2c4aa0',
+  arm: () => '#c98a5e',
+  leg: () => '#4a4a6a',
+};
+function blankPixels(part) {
+  const px = new Array(SKIN_SIZE * SKIN_SIZE);
+  for (let y = 0; y < SKIN_SIZE; y++) for (let x = 0; x < SKIN_SIZE; x++) px[y * SKIN_SIZE + x] = DEFAULT_SKIN[part](x, y);
+  return px;
+}
+let skin = { head: blankPixels('head'), body: blankPixels('body'), arm: blankPixels('arm'), leg: blankPixels('leg') };
+function makeSkinTextures() {
+  const canvases = {}, textures = {}, mats = {};
+  for (const part of ['head', 'body', 'arm', 'leg']) {
+    const c = document.createElement('canvas'); c.width = c.height = SKIN_SIZE;
+    canvases[part] = c;
+    const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+    textures[part] = t;
+    mats[part] = new THREE.MeshBasicMaterial({ map: t });
+  }
+  return { canvases, textures, mats };
+}
+function paintSkinTextures(tex, data) {
+  for (const part of ['head', 'body', 'arm', 'leg']) {
+    const c = tex.canvases[part], g = c.getContext('2d'), px = data[part];
+    for (let y = 0; y < SKIN_SIZE; y++) for (let x = 0; x < SKIN_SIZE; x++) {
+      const col = px && px[y * SKIN_SIZE + x];
+      if (!col) g.clearRect(x, y, 1, 1); else { g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+    }
+    tex.textures[part].needsUpdate = true;
+  }
+}
+const skinTex = makeSkinTextures();
+function redrawSkinPart(part) { paintSkinTextures(skinTex, skin); }
+paintSkinTextures(skinTex, skin);
+function box3(w, h, d, mat, y) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.y = y; const g = new THREE.Group(); g.add(m); m.position.y = 0; g.position.y = y; return g; }
+function nameTagSprite(name) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const g = c.getContext('2d'); g.font = 'bold 34px monospace'; g.textAlign = 'center';
+  g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(0, 8, 256, 44);
+  g.fillStyle = '#fff'; g.fillText(name.slice(0, 16), 128, 40);
+  const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter;
+  const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true }));
+  spr.scale.set(1.4, .35, 1); spr.position.y = 2.35; spr.renderOrder = 5;
+  return spr;
+}
+function buildBodyModel(mats, name) {
+  const g = new THREE.Group();
+  const head = box3(.5, .5, .5, mats.head, 1.75);
+  const body = box3(.5, .75, .28, mats.body, 1.125);
+  const armL = box3(.25, .75, .25, mats.arm, 1.125); armL.position.x = -.375;
+  const armR = box3(.25, .75, .25, mats.arm, 1.125); armR.position.x = .375;
+  const legL = box3(.25, .75, .25, mats.leg, .375); legL.position.x = -.13;
+  const legR = box3(.25, .75, .25, mats.leg, .375); legR.position.x = .13;
+  g.add(head, body, armL, armR, legL, legR);
+  if (name) g.add(nameTagSprite(name));
+  return { g, head, body, armL, armR, legL, legR };
+}
+const pm = buildBodyModel(skinTex.mats, null);
+const playerModel = pm.g, pmArmL = pm.armL, pmArmR = pm.armR, pmLegL = pm.legL, pmLegR = pm.legR;
+playerModel.visible = false;
+scene.add(playerModel);
+let pmAnim = 0;
+function updatePlayerModel(dt) {
+  playerModel.position.set(P.pos.x, P.pos.y, P.pos.z);
+  playerModel.rotation.y = yaw;
+  const spd = Math.hypot(P.vel.x, P.vel.z);
+  pmAnim += spd * dt * 3;
+  const sw = P.onGround || P.fly ? Math.sin(pmAnim) * Math.min(1, spd / 4) * .8 : 0;
+  pmArmL.rotation.x = sw; pmArmR.rotation.x = -sw;
+  pmLegL.rotation.x = -sw; pmLegR.rotation.x = sw;
+}
+function loadSkinFromData(data) {
+  for (const part of ['head', 'body', 'arm', 'leg']) if (data[part] && data[part].length === SKIN_SIZE * SKIN_SIZE) skin[part] = data[part].slice();
+  paintSkinTextures(skinTex, skin);
+}
+(() => {
+  try { const saved = JSON.parse(localStorage.getItem('nikocraft-skin')); if (saved) loadSkinFromData(saved); } catch (e) {}
+})();
+function saveSkinToStorage() { try { localStorage.setItem('nikocraft-skin', JSON.stringify(skin)); } catch (e) {} }
+
+/* ================= multiplayer ================= */
+let mp = null, mpMoveT = 0, mpTimeT = 5;
+const mpRemote = new Map(); // id -> { name, skinData, tex, model, x,y,z, yaw, tx,ty,tz,tyaw, dim, anim }
+function mpSend(obj) { if (mp && mp.ws.readyState === 1) mp.ws.send(JSON.stringify(obj)); }
+function mpCreateRemote(id, name, skinData, x, y, z, yaw, pitch, dim) {
+  if (mpRemote.has(id)) mpRemoveRemote(id);
+  const tex = makeSkinTextures();
+  paintSkinTextures(tex, skinData || skin);
+  const model = buildBodyModel(tex.mats, name);
+  scene.add(model.g);
+  mpRemote.set(id, { name, skinData, tex, model, x, y, z, yaw, tx: x, ty: y, tz: z, tyaw: yaw, dim, anim: 0 });
+}
+function mpRemoveRemote(id) {
+  const r = mpRemote.get(id); if (!r) return;
+  scene.remove(r.model.g);
+  r.model.g.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+  Object.values(r.tex.mats).forEach(m => m.dispose());
+  Object.values(r.tex.textures).forEach(t => t.dispose());
+  mpRemote.delete(id);
+}
+function mpClearAllRemote() { for (const id of [...mpRemote.keys()]) mpRemoveRemote(id); }
+function joinMultiplayer(name) {
+  let ws;
+  try { ws = new WebSocket((location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host); }
+  catch (e) { $('mpMsg').textContent = 'Could not connect.'; return; }
+  mp = { ws, id: null, applyingRemote: false };
+  $('mpMsg').textContent = 'Connecting…';
+  ws.addEventListener('open', () => ws.send(JSON.stringify({ t: 'join', name: name || 'Player', skin })));
+  ws.addEventListener('message', (e) => {
+    let msg; try { msg = JSON.parse(e.data); } catch (err) { return; }
+    if (msg.t === 'init') {
+      mp.id = msg.id;
+      const ed = {}; for (const k in msg.edits) ed[k] = Object.entries(msg.edits[k]).map(([i, v]) => [+i, v]);
+      startGame({ id: 'mp', name: 'Multiplayer', seed: msg.seed, mode: 'survival', time: msg.gameTime, ed, chests: msg.chests });
+      for (const p of msg.players) if (p.id !== mp.id) mpCreateRemote(p.id, p.name, p.skin, p.x, p.y, p.z, p.yaw, p.pitch, p.dim);
+      flashName('Joined the shared world');
+    } else if (msg.t === 'playerJoin') {
+      mpCreateRemote(msg.id, msg.name, msg.skin, msg.x, msg.y, msg.z, msg.yaw, msg.pitch, msg.dim);
+      flashName(msg.name + ' joined');
+    } else if (msg.t === 'playerMove') {
+      const r = mpRemote.get(msg.id); if (!r) return;
+      r.tx = msg.x; r.ty = msg.y; r.tz = msg.z; r.tyaw = msg.yaw; r.dim = msg.dim;
+    } else if (msg.t === 'playerLeave') {
+      const r = mpRemote.get(msg.id); if (r) flashName(r.name + ' left');
+      mpRemoveRemote(msg.id);
+    } else if (msg.t === 'block') {
+      mp.applyingRemote = true; setBlock(msg.x, msg.y, msg.z, msg.id, msg.dim); flushDirty(); mp.applyingRemote = false;
+    } else if (msg.t === 'chest') {
+      if (msg.slots) chestData.set(msg.key, msg.slots); else chestData.delete(msg.key);
+      if (openChestKey === msg.key) { openChestSlots = msg.slots || new Array(27).fill(null); renderChest(); }
+    } else if (msg.t === 'time') {
+      gameTime = msg.gameTime;
+    } else if (msg.t === 'chat') {
+      flashName(msg.name + ': ' + msg.msg);
+    } else if (msg.t === 'playerSkin') {
+      const r = mpRemote.get(msg.id); if (r) { r.skinData = msg.skin; paintSkinTextures(r.tex, msg.skin); }
+    }
+  });
+  ws.addEventListener('close', () => { if (mp) { flashName('Disconnected from the shared world'); leaveMultiplayer(false); } });
+  ws.addEventListener('error', () => { $('mpMsg').textContent = 'Could not connect to the shared world.'; });
+}
+function leaveMultiplayer(closeSocket) {
+  if (!mp) return;
+  if (closeSocket !== false) try { mp.ws.close(); } catch (e) {}
+  mp = null;
+  mpClearAllRemote();
+}
+function mpSyncChest(key, slots) { mpSend({ t: 'chest', key, slots }); }
+function updateMultiplayer(dt) {
+  if (!mp) return;
+  for (const r of mpRemote.values()) {
+    r.model.g.visible = r.dim === P.dim;
+    if (r.dim !== P.dim) continue;
+    const dx = r.tx - r.x, dz = r.tz - r.z, k = Math.min(1, dt * 10);
+    r.x += dx * k; r.y += (r.ty - r.y) * k; r.z += dz * k;
+    let dyaw = (r.tyaw - r.yaw + Math.PI * 3) % (Math.PI * 2) - Math.PI; r.yaw += dyaw * k;
+    r.model.g.position.set(r.x, r.y, r.z);
+    r.model.g.rotation.y = r.yaw;
+    const spd = Math.hypot(dx, dz);
+    r.anim += Math.min(spd, 1) * dt * 6;
+    const sw = Math.sin(r.anim) * Math.min(1, spd * 3) * .8;
+    r.model.armL.rotation.x = sw; r.model.armR.rotation.x = -sw;
+    r.model.legL.rotation.x = -sw; r.model.legR.rotation.x = sw;
+  }
+  mpMoveT -= dt;
+  if (mpMoveT <= 0) { mpMoveT = .12; mpSend({ t: 'move', x: P.pos.x, y: P.pos.y, z: P.pos.z, yaw, pitch, dim: P.dim }); }
+  mpTimeT -= dt;
+  if (mpTimeT <= 0) { mpTimeT = 5; mpSend({ t: 'time', gameTime }); }
+}
+if (location.protocol === 'http:' || location.protocol === 'https:') $('mpPanel').classList.remove('hidden');
+$('mpJoinBtn').onclick = () => { $('mpMsg').textContent = ''; joinMultiplayer($('mpName').value.trim()); };
+
+/* ================= camera perspective ================= */
+let camMode = 0; // 0 = first person, 1 = third person
+function updateCameraView() {
+  const eye = new V3(P.pos.x, P.pos.y + 1.62, P.pos.z);
+  camera.rotation.set(pitch, yaw, 0);
+  if (camMode === 0) { camera.position.copy(eye); playerModel.visible = false; return; }
+  playerModel.visible = true;
+  const fx = -Math.sin(yaw) * Math.cos(pitch), fy = Math.sin(pitch), fz = -Math.cos(yaw) * Math.cos(pitch);
+  let dist = 4.5;
+  const back = raycast(eye, new V3(-fx, -fy, -fz), dist, P.dim);
+  if (back) dist = Math.max(1, back.dist - .3);
+  camera.position.set(eye.x - fx * dist, eye.y - fy * dist, eye.z - fz * dist);
+}
+
+/* ================= world storage ================= */
+const chunks = new Map(), edits = new Map(), dirty = new Set();
+const key = (cx, cz) => cx + ',' + cz;
+function getBlock(x, y, z, dim = DIM_OVERWORLD) {
+  if (y < 0) return 17; if (y >= CH) return 0;
+  const cx = Math.floor(x / CS), cz = Math.floor(z / CS), k = key(cx, cz), dimKey = dim + ':' + k;
+  const ch = chunks.get(dimKey);
+  if (!ch) return 0;
+  return ch.data[(y * CS + (z - cz * CS)) * CS + (x - cx * CS)];
+}
+function solidAt(x, y, z, dim = DIM_OVERWORLD) {
+  if (y < 0) return true; if (y >= CH) return false;
+  const cx = Math.floor(x / CS), cz = Math.floor(z / CS), k = key(cx, cz), dimKey = dim + ':' + k;
+  const ch = chunks.get(dimKey);
+  if (!ch) return true;
+  return isSolid(ch.data[(y * CS + (z - cz * CS)) * CS + (x - cx * CS)]);
+}
+function setBlock(x, y, z, id, dim = DIM_OVERWORLD) {
+  if (y < 0 || y >= CH) return false;
+  const cx = Math.floor(x / CS), cz = Math.floor(z / CS), k = key(cx, cz), dimKey = dim + ':' + k;
+  const ch = chunks.get(dimKey);
+  if (!ch) return false;
+  const lx = x - cx * CS, lz = z - cz * CS, i = (y * CS + lz) * CS + lx;
+  ch.data[i] = id;
+  let e = edits.get(dimKey); if (!e) { e = new Map(); edits.set(dimKey, e); } e.set(i, id);
+  dirty.add(dimKey);
+  if (lx === 0 || lx === CS - 1 || lz === 0 || lz === CS - 1)
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) dirty.add(dim + ':' + key(cx + a, cz + b));
+  if (mp && !mp.applyingRemote) mpSend({ t: 'block', dim, cx, cz, i, id, x, y, z });
+  return true;
+}
+function flushDirty() { for (const k of dirty) { const ch = chunks.get(k); if (ch && ch.built) buildChunk(ch); } dirty.clear(); }
+
+/* ================= generation ================= */
+const DENS = { [PLAINS]: .005, [FOREST]: .055, [SAVANNA]: .007, [JUNGLE]: .09, [SWAMP]: .02, [TAIGA]: .045, [SNOWY]: .008, [MOUNT]: .006 };
+function genChunk(cx, cz, dim = DIM_OVERWORLD) {
+  const d = new Uint8Array(CS * CS * CH), bio = new Uint8Array(CS * CS), ox = cx * CS, oz = cz * CS;
+  const I = (x, y, z) => (y * CS + z) * CS + x;
+
+  if (dim === DIM_NETHER) {
+    for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+      const wx = ox + x, wz = oz + z;
+      terrain(wx, wz, DIM_NETHER);
+      const h = TH;
+      for (let y = 0; y < CH; y++) {
+        let id = 0;
+        if (y === 0) id = 17;
+        else if (y < h) id = ih(wx, y, wz) < .15 ? 41 : (ih(wx, y + 20, wz) < .05 ? 38 : 38);
+        else if (y === h) id = ih(wx, 1, wz) < .3 ? 39 : 38;
+        else if (y < SEA) id = 41;
+        d[I(x, y, z)] = id;
+      }
+    }
+    return { d, bio };
+  }
+
+  if (dim === DIM_END) {
+    for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+      const wx = ox + x, wz = oz + z;
+      terrain(wx, wz, DIM_END);
+      const h = TH;
+      for (let y = 0; y < CH; y++) {
+        let id = 0;
+        if (y === 0) id = 17;
+        else if (y < h) id = 42;
+        else if (y === h) id = 42;
+        d[I(x, y, z)] = id;
+      }
+    }
+    return { d, bio };
+  }
+
+  // Overworld with caves
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const wx = ox + x, wz = oz + z;
+    terrain(wx, wz); const h = TH, b = TB; bio[z * CS + x] = b;
+    const top = Math.max(h, SEA), under = h < SEA, band = Math.floor(ih(wx >> 4, 5, wz >> 4) * 10);
+    for (let y = 0; y <= top; y++) {
+      let id;
+      if (y === 0 || (y <= 2 && ih(wx, y, wz) < .5)) id = 17;
+      else if (y <= h) {
+        const dp = h - y; id = 3;
+        const caveNoise = n3(wx * .05, y * .08, wz * .05);
+        if (caveNoise > .6 && y > 10 && y < h - 4) { id = 0; }
+        else {
+          switch (b) {
+            case OCEAN: case FROZEN:
+              if (dp === 0) id = ih(wx, 1, wz) < .3 ? 19 : ih(wx, 2, wz) < .12 ? 36 : 4; else if (dp < 3) id = 4; break;
+            case BEACH: if (dp < 4) id = 4; break;
+            case DESERT: if (dp < 4) id = 4; else if (dp < 8) id = 30; break;
+            case BADLANDS: if (dp === 0 && h < SEA + 7) id = 31; else if (dp < 16) id = BANDS[(y + band) % BANDS.length]; break;
+            case SNOWY: if (dp === 0) id = under ? 2 : 12; else if (dp < 4) id = 2; break;
+            case MOUNT:
+              if (h >= SNOW) { if (dp === 0) id = 21; }
+              else if (h <= SEA + 24) { if (dp === 0) id = under ? 2 : 1; else if (dp < 3) id = 2; }
+              break;
+            case SWAMP: if (dp === 0) id = under ? (ih(wx, 3, wz) < .4 ? 36 : 2) : 1; else if (dp < 4) id = 2; break;
+            default: if (dp === 0) id = under ? 2 : 1; else if (dp < 4) id = 2;
+          }
+          if (id === 3) {
+            const r = ih(wx, y, wz);
+            if (r < .014 && y < 90) id = 13;
+            else if (r < .02 && y < 60) id = 45;
+            else if (r < .028 && y < 55) id = 14;
+            else if (r < .033 && y < 20) id = 52;
+            else if (r < .037 && y < 35) id = 53;
+            else if (r < .04 && y < 24) id = 15;
+            else if (r < .0415 && y < 14) id = 16;
+          }
+          if (y > 3 && y < h - 3 && n3(wx * .07, y * .09, wz * .07) > .72) id = 0;
+        }
+      } else id = (y === SEA && (b === FROZEN || b === SNOWY)) ? 35 : 5;
+      d[I(x, y, z)] = id;
+    }
+  }
+
+  const put = (x, y, z, id, onlyAir) => {
+    if (x < 0 || x >= CS || z < 0 || z >= CS || y < 0 || y >= CH) return;
+    const i = I(x, y, z); if (onlyAir && d[i]) return; d[i] = id;
+  };
+  const circ = (x, y, z, r, leaf) => { const R = Math.ceil(r); for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) if (dx * dx + dz * dz <= r * r) put(x + dx, y, z + dz, leaf, true); };
+  const trunk = (x, h, z, th, log) => { for (let y = 1; y <= th; y++) put(x, h + y, z, log, false); put(x, h, z, 2, false); };
+  function oakLike(x, h, z, wx, wz, th, log, leaf) {
+    const top = h + th;
+    for (let ly = top - 2; ly <= top + 1; ly++) {
+      const rr = ly <= top - 1 ? 2 : 1;
+      for (let dz = -rr; dz <= rr; dz++) for (let dx = -rr; dx <= rr; dx++) {
+        if (Math.abs(dx) === rr && Math.abs(dz) === rr && (ly === top + 1 || ih(wx + dx, ly, wz + dz) < .5)) continue;
+        put(x + dx, ly, z + dz, leaf, true);
+      }
+    }
+    trunk(x, h, z, th, log);
+  }
+  function spruce(x, h, z, th) {
+    const top = h + th;
+    put(x, top + 1, z, 29, true);
+    for (let ly = top; ly >= h + 3; ly--) {
+      const k = top - ly, rr = k < 2 ? 1 : (k % 2 ? 2 : 1);
+      for (let dz = -rr; dz <= rr; dz++) for (let dx = -rr; dx <= rr; dx++) {
+        if (Math.abs(dx) === rr && Math.abs(dz) === rr) continue;
+        put(x + dx, ly, z + dz, 29, true);
+      }
+    }
+    trunk(x, h, z, th, 28);
+  }
+
+  for (let z = -4; z < CS + 4; z++) for (let x = -4; x < CS + 4; x++) {
+    const wx = ox + x, wz = oz + z, r = ih(wx, 11, wz);
+    if (r >= .09) continue;
+    terrain(wx, wz); const h = TH, b = TB, dn = DENS[b];
+    if (!dn || r >= dn || h <= SEA) continue;
+    if (b === MOUNT && h > SEA + 24) continue;
+    const k = ih(wx, 12, wz), k2 = ih(wx, 13, wz);
+    if (b === FOREST) { if (k < .3) oakLike(x, h, z, wx, wz, 5 + Math.floor(k2 * 3), 26, 27); else oakLike(x, h, z, wx, wz, 4 + Math.floor(k2 * 3), 6, 7); }
+    else if (b === PLAINS) oakLike(x, h, z, wx, wz, 4 + Math.floor(k2 * 3), 6, 7);
+    else if (b === SAVANNA) { const th = 4 + Math.floor(k2 * 2), top = h + th; circ(x, top + 1, z, 2.6, 7); circ(x, top + 2, z, 1.5, 7); trunk(x, h, z, th, 6); }
+    else if (b === JUNGLE) {
+      if (k < .35) { put(x, h + 1, z, 6, false); circ(x, h + 1, z, 1.6, 7); circ(x, h + 2, z, 1.1, 7); }
+      else { const th = 9 + Math.floor(k2 * 5), top = h + th; circ(x, top - 1, z, 3.2, 7); circ(x, top, z, 2.5, 7); circ(x, top + 1, z, 1.5, 7); trunk(x, h, z, th, 6); }
+    }
+    else if (b === SWAMP) { const th = 4 + Math.floor(k2 * 2), top = h + th; circ(x, top - 1, z, 3.2, 7); circ(x, top, z, 2.2, 7); circ(x, top + 1, z, 1.1, 7); trunk(x, h, z, th, 6); }
+    else spruce(x, h, z, 6 + Math.floor(k2 * 4));
+  }
+
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const wx = ox + x, wz = oz + z;
+    if (ih(wx, 21, wz) >= .006 || bio[z * CS + x] !== DESERT) continue;
+    terrain(wx, wz); const h = TH;
+    if (h <= SEA + 1 || d[I(x, h, z)] !== 4) continue;
+    const n = 1 + Math.floor(ih(wx, 22, wz) * 3);
+    for (let q = 1; q <= n; q++) put(x, h + q, z, 20, true);
+  }
+
+  // small plants: flowers, grass, mushrooms, dead bush, sugar cane by the shore
+  const put2 = (x, y, z, id) => { if (x >= 0 && x < CS && z >= 0 && z < CS && y >= 0 && y < CH) put(x, y, z, id, true); };
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const wx = ox + x, wz = oz + z, b = bio[z * CS + x];
+    terrain(wx, wz); const h = TH;
+    if (h < 1 || h >= CH - 2) continue;
+    const surf = d[I(x, h, z)], r = ih(wx, 25, wz), r2 = ih(wx, 26, wz);
+    if (surf === 1 || surf === 12) {
+      if ((b === PLAINS || b === FOREST || b === SAVANNA) && r < .05) put2(x, h + 1, z, r < .025 ? 76 : 77);
+      else if (b === SWAMP && r < .06) put2(x, h + 1, z, 78);
+      else if (b !== MOUNT && b !== SNOWY && r < .1) put2(x, h + 1, z, 81);
+      if (b === JUNGLE && r2 < .02) put2(x, h + 1, z, 79);
+    } else if (surf === 4 && b === DESERT && r < .015) put2(x, h + 1, z, 80);
+    if (h === SEA && (surf === 4 || surf === 1 || surf === 2)) {
+      let adjWater = false;
+      for (const [ddx, ddz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const bx = x + ddx, bz = z + ddz; if (bx >= 0 && bx < CS && bz >= 0 && bz < CS && d[I(bx, h, bz)] === 5) adjWater = true; }
+      if (adjWater && r2 < .3) { const cn = 1 + Math.floor(ih(wx, 27, wz) * 3); for (let q = 1; q <= cn; q++) put2(x, h + q, z, 82); }
+    }
+  }
+
+  // cleanup pass: drop unsupported gravity blocks, strip fully-isolated leaf blobs
+  for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) for (let y = 1; y < CH; y++) {
+    const i = I(x, y, z), id = d[i];
+    if (id && BL[id] && BL[id].fall && d[I(x, y - 1, z)] === 0) {
+      let yy = y; while (yy > 0 && d[I(x, yy - 1, z)] === 0) yy--;
+      if (yy !== y) { d[i] = 0; d[I(x, yy, z)] = id; }
+    }
+  }
+  const isLog = v => v === 6 || v === 26 || v === 28;
+  const isLeaf = v => v === 7 || v === 27 || v === 29;
+  for (let z = 2; z < CS - 2; z++) for (let x = 2; x < CS - 2; x++) for (let y = 1; y < CH; y++) {
+    const i = I(x, y, z); if (!isLeaf(d[i])) continue;
+    let near = false;
+    for (let dz = -2; dz <= 2 && !near; dz++) for (let dy = -3; dy <= 1 && !near; dy++) for (let dx = -2; dx <= 2 && !near; dx++)
+      if (isLog(d[I(x + dx, y + dy, z + dz)])) near = true;
+    if (!near) d[i] = 0;
+  }
+
+  const e = edits.get(dim + ':' + key(cx, cz)); if (e) for (const [i, id] of e) d[i] = id;
+  return { d, bio };
+}
+
+/* ================= meshing ================= */
+const FACES = [
+  { dir:[-1,0,0], ua:1, va:2, corners:[{p:[0,1,0],uv:[0,1]},{p:[0,0,0],uv:[0,0]},{p:[0,1,1],uv:[1,1]},{p:[0,0,1],uv:[1,0]}] },
+  { dir:[1,0,0],  ua:1, va:2, corners:[{p:[1,1,1],uv:[0,1]},{p:[1,0,1],uv:[0,0]},{p:[1,1,0],uv:[1,1]},{p:[1,0,0],uv:[1,0]}] },
+  { dir:[0,-1,0], ua:0, va:2, corners:[{p:[1,0,1],uv:[1,0]},{p:[0,0,1],uv:[0,0]},{p:[1,0,0],uv:[1,1]},{p:[0,0,0],uv:[0,1]}] },
+  { dir:[0,1,0],  ua:0, va:2, corners:[{p:[0,1,1],uv:[1,1]},{p:[1,1,1],uv:[0,1]},{p:[0,1,0],uv:[1,0]},{p:[1,1,0],uv:[0,0]}] },
+  { dir:[0,0,-1], ua:0, va:1, corners:[{p:[1,0,0],uv:[0,0]},{p:[0,0,0],uv:[1,0]},{p:[1,1,0],uv:[0,1]},{p:[0,1,0],uv:[1,1]}] },
+  { dir:[0,0,1],  ua:0, va:1, corners:[{p:[0,0,1],uv:[0,0]},{p:[1,0,1],uv:[1,0]},{p:[0,1,1],uv:[0,1]},{p:[1,1,1],uv:[1,1]}] },
+];
+const SHADE = [.78, .78, .5, 1, .64, .64];
+const AOV = [.45, .65, .82, 1];
+const E = .01;
+function buildChunk(ch) {
+  const d = ch.data, ox = ch.cx * CS, oz = ch.cz * CS, dim = ch.dim;
+  const O = { p: [], u: [], c: [], i: [] }, W = { p: [], u: [], c: [], i: [] };
+  const gb = (x, y, z) => {
+    if (y < 0) return 17; if (y >= CH) return 0;
+    if (x >= 0 && x < CS && z >= 0 && z < CS) return d[(y * CS + z) * CS + x];
+    return getBlock(ox + x, y, oz + z, dim);
+  };
+  const s = [0, 0, 0], t = [0, 0, 0];
+  for (let y = 0; y < CH; y++) for (let z = 0; z < CS; z++) for (let x = 0; x < CS; x++) {
+    const id = d[(y * CS + z) * CS + x]; if (!id) continue;
+    const bd = BL[id];
+    if (bd.sprite) {
+      const tile = bd.t[1], tc = tile % COLS, tr = Math.floor(tile / COLS);
+      const u0 = (tc + E) / COLS, u1 = (tc + 1 - E) / COLS, v0 = 1 - (tr + 1 - E) / ROWS, v1 = 1 - (tr + E) / ROWS;
+      const uvs = [[u0, v0], [u1, v0], [u0, v1], [u1, v1]];
+      for (const q of [[[0, 0, 0], [1, 0, 1], [0, 1, 0], [1, 1, 1]], [[1, 0, 0], [0, 0, 1], [1, 1, 0], [0, 1, 1]]]) {
+        const base = O.p.length / 3;
+        for (let k = 0; k < 4; k++) { O.p.push(x + q[k][0], y + q[k][1], z + q[k][2]); O.u.push(uvs[k][0], uvs[k][1]); O.c.push(.9, .9, .9); }
+        O.i.push(base, base + 1, base + 2, base + 2, base + 1, base + 3, base, base + 2, base + 1, base + 1, base + 2, base + 3);
+      }
+      continue;
+    }
+    const isW = id === 5, bio = ch.bio[z * CS + x];
+    const lowTop = isW && gb(x, y + 1, z) !== 5;
+    for (let f = 0; f < 6; f++) {
+      const F = FACES[f], dx = F.dir[0], dy = F.dir[1], dz = F.dir[2];
+      const n = gb(x + dx, y + dy, z + dz);
+      if (isW) { if (n !== 0) continue; }
+      else if (!TRANS[n] || n === id) continue;
+      const tile = bd.t[f === 3 ? 0 : f === 2 ? 2 : 1], tc = tile % COLS, tr = Math.floor(tile / COLS);
+      const tint = isW ? WTINT[bio] : ((id === 1 && f === 3) || id === 7) ? TINT[bio] : null;
+      const A = isW ? W : O, base = A.p.length / 3, sh = SHADE[f];
+      const bx = x + dx, by = y + dy, bz = z + dz;
+      for (const c of F.corners) {
+        const p = c.p;
+        A.p.push(x + p[0], y + (lowTop && p[1] === 1 ? .88 : p[1]), z + p[2]);
+        A.u.push((tc + E + c.uv[0] * (1 - 2 * E)) / COLS, 1 - (tr + 1 - E - c.uv[1] * (1 - 2 * E)) / ROWS);
+        let ao = 1;
+        if (!isW) {
+          s[0] = s[1] = s[2] = 0; t[0] = t[1] = t[2] = 0;
+          s[F.ua] = p[F.ua] ? 1 : -1; t[F.va] = p[F.va] ? 1 : -1;
+          const a1 = !TRANS[gb(bx + s[0], by + s[1], bz + s[2])];
+          const a2 = !TRANS[gb(bx + t[0], by + t[1], bz + t[2])];
+          const a3 = !TRANS[gb(bx + s[0] + t[0], by + s[1] + t[1], bz + s[2] + t[2])];
+          ao = AOV[(a1 && a2) ? 0 : 3 - (a1 + a2 + a3)];
+        }
+        const L = sh * ao;
+        if (tint) A.c.push(L * tint[0], L * tint[1], L * tint[2]); else A.c.push(L, L, L);
+      }
+      A.i.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+    }
+  }
+  disposeMeshes(ch);
+  const mk = (A, mat) => {
+    if (!A.p.length) return null;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(A.p, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(A.u, 2));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(A.c, 3));
+    g.setIndex(A.i); g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, mat); m.position.set(ox, 0, oz); m.matrixAutoUpdate = false; m.updateMatrix();
+    scene.add(m); return m;
+  };
+  ch.mesh = mk(O, matOpaque);
+  ch.wmesh = mk(W, matWater); if (ch.wmesh) ch.wmesh.renderOrder = 1;
+  ch.built = true;
+}
+function disposeMeshes(ch) {
+  for (const k of ['mesh', 'wmesh']) if (ch[k]) { scene.remove(ch[k]); ch[k].geometry.dispose(); ch[k] = null; }
+}
+
+/* ================= chunk streaming ================= */
+let RD = 4, offsets = [];
+function computeOffsets() {
+  offsets = []; const R = RD + 1;
+  for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) { const d2 = dx * dx + dz * dz; if (d2 <= (RD + 1.5) ** 2) offsets.push([dx, dz, d2]); }
+  offsets.sort((a, b) => a[2] - b[2]);
+}
+function neighborsReady(cx, cz, dim) {
+  for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if (!chunks.has(dim + ':' + key(cx + a, cz + b))) return false;
+  return true;
+}
+let frameNo = 0;
+function updateChunks(budget, dim = DIM_OVERWORLD) {
+  const pcx = Math.floor(P.pos.x / CS), pcz = Math.floor(P.pos.z / CS), t0 = performance.now();
+  for (const [dx, dz, d2] of offsets) {
+    if (performance.now() - t0 > budget) break;
+    const cx = pcx + dx, cz = pcz + dz, k = key(cx, cz), dimKey = dim + ':' + k;
+    const ch = chunks.get(dimKey);
+    if (!ch) { const g = genChunk(cx, cz, dim); chunks.set(dimKey, { cx, cz, dim, data: g.d, bio: g.bio, mesh: null, wmesh: null, built: false }); continue; }
+    if (!ch.built && d2 <= RD * RD + .5 && neighborsReady(cx, cz, dim)) buildChunk(ch);
+  }
+  if (frameNo % 40 === 0) for (const [k, ch] of chunks) {
+    if (ch.dim !== dim || (ch.cx - pcx) ** 2 + (ch.cz - pcz) ** 2 > (RD + 3) ** 2) { disposeMeshes(ch); chunks.delete(k); }
+  }
+}
+function applyFog() { scene.fog.near = RD * CS * .5; scene.fog.far = RD * CS * .95; }
+
+/* ================= player ================= */
+const P = { pos: new V3(0, 60, 0), vel: new V3(), w: .6, h: 1.8, onGround: false, hitWall: false, fly: false, hp: 20, food: 20, sat: 5, ex: 0, fallStart: null, dim: DIM_OVERWORLD };
+let yaw = 0, pitch = 0, mode = 'survival', worldSeed = '', worldId = '', worldName = '', gameTime = .03, spawn = new V3();
+let inv = new Array(36).fill(null), sel = 0, held = null, craftGrid = new Array(9).fill(null);
+const ARMOR_SLOTS = ['head', 'chest', 'legs', 'feet'];
+let armor = new Array(4).fill(null);
+const chestData = new Map();
+let openChestKey = null, openChestSlots = null;
+let regenT = 0, starveT = 0, now = 0, state = 'title';
+const TNT_ENTITIES = [];
+
+function collides(e, x, y, z, dim = DIM_OVERWORLD) {
+  const hw = e.w / 2;
+  const x0 = Math.floor(x - hw), x1 = Math.floor(x + hw - 1e-6);
+  const y0 = Math.floor(y), y1 = Math.floor(y + e.h - 1e-6);
+  const z0 = Math.floor(z - hw), z1 = Math.floor(z + hw - 1e-6);
+  for (let by = y0; by <= y1; by++) for (let bz = z0; bz <= z1; bz++) for (let bx = x0; bx <= x1; bx++) if (solidAt(bx, by, bz, dim)) return true;
+  return false;
+}
+function moveEntity(e, dt, dim = DIM_OVERWORLD) {
+  e.onGround = false; e.hitWall = false;
+  const steps = Math.max(1, Math.ceil(Math.max(Math.abs(e.vel.x), Math.abs(e.vel.y), Math.abs(e.vel.z)) * dt / .35));
+  const h = dt / steps, hw = e.w / 2;
+  for (let s = 0; s < steps; s++) {
+    let ny = e.pos.y + e.vel.y * h;
+    if (collides(e, e.pos.x, ny, e.pos.z, dim)) {
+      if (e.vel.y < 0) { ny = Math.floor(ny) + 1; e.onGround = true; } else ny = Math.floor(ny + e.h) - e.h - 1e-3;
+      if (collides(e, e.pos.x, ny, e.pos.z, dim)) ny = e.pos.y;
+      e.vel.y = 0;
+    }
+    e.pos.y = ny;
+    let nx = e.pos.x + e.vel.x * h;
+    if (collides(e, nx, e.pos.y, e.pos.z, dim)) {
+      nx = e.vel.x > 0 ? Math.floor(nx + hw) - hw - 1e-3 : Math.floor(nx - hw) + 1 + hw + 1e-3;
+      if (collides(e, nx, e.pos.y, e.pos.z, dim)) nx = e.pos.x;
+      e.vel.x = 0; e.hitWall = true;
+    }
+    e.pos.x = nx;
+    let nz = e.pos.z + e.vel.z * h;
+    if (collides(e, e.pos.x, e.pos.y, nz, dim)) {
+      nz = e.vel.z > 0 ? Math.floor(nz + hw) - hw - 1e-3 : Math.floor(nz - hw) + 1 + hw + 1e-3;
+      if (collides(e, e.pos.x, e.pos.y, nz, dim)) nz = e.pos.z;
+      e.vel.z = 0; e.hitWall = true;
+    }
+    e.pos.z = nz;
+  }
+}
+function exhaust(n) {
+  if (mode !== 'survival') return;
+  P.ex += n;
+  while (P.ex >= 4) { P.ex -= 4; if (P.sat > 0) P.sat = Math.max(0, P.sat - 1); else if (P.food > 0) { P.food--; renderStats(); } }
+}
+const keys = {};
+function updatePlayer(dt) {
+  const look = 2.2 * dt;
+  yaw += ((keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0)) * look;
+  pitch = Math.max(-1.55, Math.min(1.55, pitch + ((keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0)) * look));
+  const f = (keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0), st = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  const shift = keys.ShiftLeft || keys.ShiftRight;
+  const inW = getBlock(Math.floor(P.pos.x), Math.floor(P.pos.y + .4), Math.floor(P.pos.z), P.dim) === 5;
+  const climbing = !P.fly && (BL[getBlock(Math.floor(P.pos.x), Math.floor(P.pos.y), Math.floor(P.pos.z), P.dim)].climb || BL[getBlock(Math.floor(P.pos.x), Math.floor(P.pos.y + 1), Math.floor(P.pos.z), P.dim)].climb);
+  const sprint = !P.fly && shift && f > 0 && (mode === 'creative' || P.food > 6);
+  let speed = P.fly ? 11 : (sprint ? 5.8 : 4.3); if (inW && !P.fly) speed *= .55; if (climbing) speed *= .5;
+  const sn = Math.sin(yaw), cs = Math.cos(yaw);
+  let mx = -sn * f + cs * st, mz = -cs * f - sn * st; const ml = Math.hypot(mx, mz); if (ml > 1) { mx /= ml; mz /= ml; }
+  const acc = Math.min(1, dt * (P.onGround || P.fly || inW || climbing ? 12 : 4));
+  P.vel.x += (mx * speed - P.vel.x) * acc; P.vel.z += (mz * speed - P.vel.z) * acc;
+  if (P.fly) {
+    const ty = ((keys.Space ? 1 : 0) - (shift ? 1 : 0)) * 9;
+    P.vel.y += (ty - P.vel.y) * Math.min(1, dt * 10);
+  } else if (climbing) {
+    P.vel.y = ((keys.Space ? 1 : 0) - (shift ? 1 : 0)) * 3.4;
+  } else if (inW) {
+    P.vel.y -= 12 * dt; if (keys.Space) P.vel.y = Math.min(P.vel.y + 34 * dt, 3.6);
+    P.vel.y = Math.max(P.vel.y, -4);
+  } else {
+    P.vel.y = Math.max(P.vel.y - 28 * dt, -55);
+    if (keys.Space && P.onGround) { P.vel.y = 8.6; exhaust(sprint ? .2 : .05); }
+  }
+  const px = P.pos.x, pz = P.pos.z;
+  moveEntity(P, dt, P.dim);
+  if (!P.fly) exhaust(Math.hypot(P.pos.x - px, P.pos.z - pz) * (inW ? .02 : sprint ? .12 : .03) + dt * .03);
+  if (!P.fly && !inW && !climbing) {
+    if (!P.onGround) P.fallStart = P.fallStart === null ? P.pos.y : Math.max(P.fallStart, P.pos.y);
+    else { if (P.fallStart !== null) { const dist = P.fallStart - P.pos.y; if (dist > 3.4) damage(Math.floor(dist - 3)); } P.fallStart = null; }
+  } else P.fallStart = null;
+  if (P.pos.y < -30) { damage(100); if (mode === 'creative') { P.pos.copy(spawn); P.vel.set(0, 0, 0); } }
+  if (mode === 'survival') {
+    if (P.food >= 18 && P.hp < 20 && P.hp > 0) { regenT += dt; if (regenT > (P.food >= 20 && P.sat > 0 ? 1.5 : 4)) { regenT = 0; P.hp++; exhaust(1.5); renderStats(); } } else regenT = 0;
+    if (P.food === 0) { starveT += dt; if (starveT > 4) { starveT = 0; if (P.hp > 1) damage(1); } } else starveT = 0;
+  }
+  updateCameraView();
+  updatePlayerModel(dt);
+}
+function armorReduction() {
+  let r = 0;
+  for (const a of armor) if (a) r += BL[a.id].armorTier * .03;
+  return Math.min(.8, r);
+}
+function damageArmor() {
+  for (let i = 0; i < 4; i++) {
+    const a = armor[i]; if (!a) continue;
+    a.durability = (a.durability === undefined ? BL[a.id].maxDur : a.durability) - 1;
+    if (a.durability <= 0) armor[i] = null;
+  }
+}
+function damage(n) {
+  if (mode === 'creative' || state === 'dead' || n <= 0) return;
+  n = Math.max(1, Math.round(n * (1 - armorReduction())));
+  if (armor.some(Boolean)) damageArmor();
+  P.hp -= n; regenT = 0;
+  const h = $('hurt'); h.style.transition = 'none'; h.style.opacity = 1; requestAnimationFrame(() => { h.style.transition = 'opacity .5s'; h.style.opacity = 0; });
+  renderStats();
+  if (P.hp <= 0) { P.hp = 0; die(); }
+}
+
+/* ================= raycast ================= */
+function raycast(o, dir, maxD, dim = DIM_OVERWORLD) {
+  let x = Math.floor(o.x), y = Math.floor(o.y), z = Math.floor(o.z);
+  const sx = Math.sign(dir.x), sy = Math.sign(dir.y), sz = Math.sign(dir.z);
+  const tdx = sx ? Math.abs(1 / dir.x) : Infinity, tdy = sy ? Math.abs(1 / dir.y) : Infinity, tdz = sz ? Math.abs(1 / dir.z) : Infinity;
+  let tx = sx > 0 ? (x + 1 - o.x) * tdx : sx < 0 ? (o.x - x) * tdx : Infinity;
+  let ty = sy > 0 ? (y + 1 - o.y) * tdy : sy < 0 ? (o.y - y) * tdy : Infinity;
+  let tz = sz > 0 ? (z + 1 - o.z) * tdz : sz < 0 ? (o.z - z) * tdz : Infinity;
+  let nx = 0, ny = 0, nz = 0, t = 0;
+  while (t <= maxD) {
+    const b = getBlock(x, y, z, dim);
+    if (b && b !== 5) return { x, y, z, nx, ny, nz, dist: t, id: b };
+    if (tx < ty && tx < tz) { x += sx; t = tx; tx += tdx; nx = -sx; ny = 0; nz = 0; }
+    else if (ty < tz) { y += sy; t = ty; ty += tdy; nx = 0; ny = -sy; nz = 0; }
+    else { z += sz; t = tz; tz += tdz; nx = 0; ny = 0; nz = -sz; }
+  }
+  return null;
+}
+
+/* ================= particles & TNT ================= */
+const partGeo = new THREE.BoxGeometry(.13, .13, .13);
+const parts = [];
+function burst(x, y, z, col, n = 10) {
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(partGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(col[0] / 255, col[1] / 255, col[2] / 255) }));
+    m.position.set(x + .2 + Math.random() * .6, y + .2 + Math.random() * .6, z + .2 + Math.random() * .6);
+    scene.add(m);
+    parts.push({ m, v: new V3((Math.random() - .5) * 4, Math.random() * 4 + 1, (Math.random() - .5) * 4), life: .45 + Math.random() * .4 });
+  }
+}
+function updateParts(dt) {
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i]; p.life -= dt; p.v.y -= 16 * dt; p.m.position.addScaledVector(p.v, dt);
+    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); parts.splice(i, 1); }
+  }
+}
+function igniteTNT(x, y, z, dim = DIM_OVERWORLD) {
+  TNT_ENTITIES.push({ x, y, z, dim, fuse: 4 });
+}
+function updateTNT(dt) {
+  for (let i = TNT_ENTITIES.length - 1; i >= 0; i--) {
+    const t = TNT_ENTITIES[i];
+    t.fuse -= dt;
+    if (t.fuse <= 0) {
+      burst(t.x, t.y, t.z, [255, 150, 50], 30);
+      for (let dx = -4; dx <= 4; dx++) for (let dy = -4; dy <= 4; dy++) for (let dz = -4; dz <= 4; dz++) {
+        const dist = Math.hypot(dx, dy, dz);
+        if (dist < 5) {
+          const bx = Math.floor(t.x) + dx, by = Math.floor(t.y) + dy, bz = Math.floor(t.z) + dz;
+          setBlock(bx, by, bz, 0, t.dim);
+        }
+      }
+      if (t.dim === P.dim) { const dp = Math.hypot(P.pos.x - t.x, P.pos.y - t.y, P.pos.z - t.z); if (dp < 6) damage(Math.max(1, Math.floor(18 - dp * 2))); }
+      mobs.forEach(m => { if (m.dim === t.dim) { const dm = Math.hypot(m.pos.x - t.x, m.pos.y - t.y, m.pos.z - t.z); if (dm < 6) { m.hp -= Math.max(1, Math.floor(18 - dm * 2)); m.hurt = .3; if (m.hp <= 0) killMob(m, true); } } });
+      TNT_ENTITIES.splice(i, 1);
+    }
+  }
+}
+
+/* ================= arrows, fishing, switchers ================= */
+const arrows = [];
+const arrowGeo = new THREE.BoxGeometry(.08, .08, .6);
+function shootArrow(pos, dir, power, dim, fromPlayer) {
+  const mesh = new THREE.Mesh(arrowGeo, new THREE.MeshBasicMaterial({ color: 0x8b5a2b }));
+  pos.addScaledVector(dir, .6); mesh.position.copy(pos); scene.add(mesh);
+  arrows.push({ pos, vel: dir.clone().multiplyScalar(power), life: 6, dim, fromPlayer, mesh });
+}
+function updateArrows(dt) {
+  for (let i = arrows.length - 1; i >= 0; i--) {
+    const a = arrows[i]; a.life -= dt;
+    a.vel.y -= 20 * dt;
+    a.pos.addScaledVector(a.vel, dt);
+    a.mesh.position.copy(a.pos);
+    a.mesh.lookAt(a.pos.x + a.vel.x, a.pos.y + a.vel.y, a.pos.z + a.vel.z);
+    let dead = a.life <= 0;
+    if (!dead && isSolid(getBlock(Math.floor(a.pos.x), Math.floor(a.pos.y), Math.floor(a.pos.z), a.dim))) dead = true;
+    if (!dead && a.fromPlayer) {
+      const m = mobs.find(mm => mm.dim === a.dim && a.pos.distanceTo(new V3(mm.pos.x, mm.pos.y + mm.h / 2, mm.pos.z)) < .7);
+      if (m) { m.hp -= 6; m.hurt = .25; m.stun = .2; if (m.hp <= 0) killMob(m, true); dead = true; }
+    } else if (!dead && !a.fromPlayer && a.dim === P.dim) {
+      if (a.pos.distanceTo(new V3(P.pos.x, P.pos.y + .9, P.pos.z)) < .7) { damage(3); dead = true; }
+    }
+    if (dead) { scene.remove(a.mesh); arrows.splice(i, 1); }
+  }
+}
+function rayFindWater(maxD, dim) {
+  const o = camera.position, dir = camera.getWorldDirection(new V3());
+  for (let t = 0; t < maxD; t += .25) if (getBlock(Math.floor(o.x + dir.x * t), Math.floor(o.y + dir.y * t), Math.floor(o.z + dir.z * t), dim) === 5) return true;
+  return false;
+}
+let fishing = false, fishTimer = 0;
+function updateFishing(dt) {
+  if (!fishing) return;
+  fishTimer -= dt;
+  if (fishTimer <= 0) { fishing = false; addItem(159, 1); flashName('Caught a fish!'); damageTool(); }
+}
+function updateSwitchers(dt) {
+  for (let i = PENDING_CLOSE.length - 1; i >= 0; i--) {
+    const p = PENDING_CLOSE[i]; p.t -= dt;
+    if (p.t <= 0) { const bd = BL[getBlock(p.x, p.y, p.z, p.dim)]; if (bd.doorOpen) { setBlock(p.x, p.y, p.z, bd.doorOpen, p.dim); flushDirty(); } PENDING_CLOSE.splice(i, 1); }
+  }
+}
+let plateAt = null;
+function updatePlate() {
+  const bx = Math.floor(P.pos.x), by = Math.floor(P.pos.y - .1), bz = Math.floor(P.pos.z);
+  const cur = BL[getBlock(bx, by, bz, P.dim)].plate ? P.dim + ':' + bx + ',' + by + ',' + bz : null;
+  if (cur === plateAt) return;
+  if (plateAt) { const [pd, rest] = plateAt.split(':'); const [ox, oy, oz] = rest.split(',').map(Number); findAndToggleNearestDoor(ox, oy, oz, +pd, 3); }
+  if (cur) findAndToggleNearestDoor(bx, by, bz, P.dim, 3);
+  plateAt = cur;
+}
+
+/* ================= inventory & crafting ================= */
+function addItem(id, n = 1) {
+  for (const s of inv) if (s && s.id === id && s.count < 64) { const k = Math.min(n, 64 - s.count); s.count += k; n -= k; if (!n) break; }
+  for (let i = 0; i < 36 && n > 0; i++) if (!inv[i]) { const k = Math.min(n, 64); inv[i] = { id, count: k }; n -= k; }
+  renderHotbar(); return n;
+}
+const countItem = id => inv.reduce((a, s) => a + (s && s.id === id ? s.count : 0), 0);
+function removeItem(id, n) {
+  for (let i = 35; i >= 0 && n > 0; i--) { const s = inv[i]; if (s && s.id === id) { const k = Math.min(n, s.count); s.count -= k; n -= k; if (!s.count) inv[i] = null; } }
+}
+function iconHTML(id) {
+  const t = iconTile(id), c = t % COLS, r = Math.floor(t / COLS);
+  return `<div class="icon" style="background-image:url(${atlasURL});background-position:${c / (COLS - 1) * 100}% ${r / (ROWS - 1) * 100}%"></div>`;
+}
+function slotHTML(s, extra = '') {
+  return `<div class="slot ${extra}"${s ? ` title="${BL[s.id].n}${s.durability !== undefined ? ' [' + s.durability + ']' : ''}"` : ''}>${s ? iconHTML(s.id) + (mode === 'survival' && s.count > 1 ? `<span class="cnt">${s.count}</span>` : '') : ''}</div>`;
+}
+function renderHotbar() {
+  let h = ''; for (let i = 0; i < 9; i++) h += slotHTML(inv[i], i === sel ? 'sel' : '');
+  $('hotbar').innerHTML = h;
+}
+let nameTimer = 0;
+function flashName(text) { const el = $('itemName'); el.textContent = text; el.style.opacity = 1; nameTimer = 1.6; }
+function selectSlot(i) { sel = (i + 9) % 9; renderHotbar(); const s = inv[sel]; flashName(s ? BL[s.id].n : ''); }
+const drumIcon = iconHTML(108);
+function renderStats() {
+  $('stats').style.visibility = mode === 'survival' ? 'visible' : 'hidden';
+  let h = ''; for (let i = 0; i < 10; i++) { const v = P.hp - i * 2; h += `<span class="heart ${v >= 2 ? 'full' : v === 1 ? 'half' : ''}">♥</span>`; }
+  $('hearts').innerHTML = h;
+  let f = ''; for (let i = 0; i < 10; i++) { const v = P.food - i * 2; f += `<span class="hun">${drumIcon}<b style="width:${v >= 2 ? 100 : v === 1 ? 50 : 0}%">${drumIcon}</b></span>`; }
+  $('hunger').innerHTML = f;
+}
+let bookTab = 'craft';
+$('bookTabs').querySelectorAll('button').forEach(b => b.onclick = () => { bookTab = b.dataset.b; renderInv(); });
+function renderInv() {
+  const cr = mode === 'creative';
+  $('invTitle').textContent = cr ? 'Creative inventory' : 'Inventory';
+  $('paletteWrap').classList.toggle('hidden', !cr);
+  $('mainWrap').classList.toggle('hidden', cr);
+  $('craftWrap').classList.toggle('hidden', cr);
+  $('armorGrid').innerHTML = ARMOR_SLOTS.map((_, i) => slotHTML(armor[i])).join('');
+  [...$('armorGrid').children].forEach((el, i) => el.onclick = () => armorSlotClick(i));
+  if (cr) {
+    const p = $('palette'); p.innerHTML = ALL_IDS.map(id => slotHTML({ id, count: 1 })).join('');
+    [...p.children].forEach((el, i) => el.onclick = () => { inv[sel] = { id: ALL_IDS[i], count: 64 }; renderInv(); renderHotbar(); });
+  } else {
+    let h = ''; for (let i = 9; i < 36; i++) h += slotHTML(inv[i]);
+    const m = $('mainGrid'); m.innerHTML = h;
+    [...m.children].forEach((el, i) => el.onclick = () => slotClick(i + 9));
+    $('bookTabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.b === bookTab));
+    $('craftPane').classList.toggle('hidden', bookTab !== 'craft');
+    $('cookPane').classList.toggle('hidden', bookTab !== 'cook');
+    if (bookTab === 'craft') {
+      renderCraftGrid();
+      let cb = '';
+      RECIPES.forEach((r, i) => {
+        cb += `<div class="rec">${slotHTML({ id: r.out[0], count: r.out[1] })}<span>${r.out[1]} × ${BL[r.out[0]].n} ← ${Object.entries(recipeNeeds(r)).map(([id, n]) => n + ' ' + BL[id].n).join(' + ')}</span><button class="btn" data-r="${i}">Load</button></div>`;
+      });
+      const cbl = $('craftBookList'); cbl.innerHTML = cb;
+      cbl.querySelectorAll('button').forEach(b => b.onclick = () => {
+        loadRecipe(RECIPES[+b.dataset.r]);
+        renderInv();
+      });
+    } else {
+      let c = '';
+      SMELT_RECIPES.forEach((r, i) => {
+        const ok = r.inp.every(([id, n]) => countItem(id) >= n);
+        c += `<div class="rec">${slotHTML({ id: r.out[0], count: r.out[1] })}<span>${r.out[1]} × ${BL[r.out[0]].n}</span><button class="btn" data-r="${i}" ${ok ? '' : 'disabled'}>Cook</button></div>`;
+      });
+      const cw = $('cookBookList'); cw.innerHTML = c;
+      cw.querySelectorAll('button').forEach(b => b.onclick = () => {
+        const r = SMELT_RECIPES[+b.dataset.r]; if (!r.inp.every(([id, n]) => countItem(id) >= n)) return;
+        r.inp.forEach(([id, n]) => removeItem(id, n)); const left = addItem(r.out[0], r.out[1]);
+        if (left) r.inp.forEach(([id, n]) => addItem(id, n));
+        renderInv();
+      });
+    }
+  }
+  let h = ''; for (let i = 0; i < 9; i++) h += slotHTML(inv[i], i === sel ? 'sel' : '');
+  const hg = $('hotGrid'); hg.innerHTML = h;
+  [...hg.children].forEach((el, i) => el.onclick = () => { if (cr && !held) { sel = i; renderInv(); renderHotbar(); } else slotClick(i); });
+  renderHeld();
+}
+function armorSlotClick(i) {
+  if (!held) { if (armor[i]) { held = armor[i]; armor[i] = null; } }
+  else if (BL[held.id].armor === ARMOR_SLOTS[i]) {
+    if (!armor[i]) { armor[i] = held; held = null; } else { const t = armor[i]; armor[i] = held; held = t; }
+  }
+  renderInv(); renderHotbar();
+}
+function slotClick(i) {
+  if (!held) { if (inv[i]) { held = inv[i]; inv[i] = null; } }
+  else if (!inv[i]) { inv[i] = held; held = null; }
+  else if (inv[i].id === held.id && mode === 'survival') { const k = Math.min(64 - inv[i].count, held.count); inv[i].count += k; held.count -= k; if (!held.count) held = null; }
+  else { const t = inv[i]; inv[i] = held; held = t; }
+  renderInv(); renderHotbar();
+}
+function craftGridClick(i) {
+  if (!held) { if (craftGrid[i]) { held = craftGrid[i]; craftGrid[i] = null; } }
+  else if (!craftGrid[i]) { craftGrid[i] = held; held = null; }
+  else if (craftGrid[i].id === held.id) { const k = Math.min(64 - craftGrid[i].count, held.count); craftGrid[i].count += k; held.count -= k; if (!held.count) held = null; }
+  else { const t = craftGrid[i]; craftGrid[i] = held; held = t; }
+  renderCraftGrid(); renderHeld();
+}
+function trimmedGrid() {
+  let r0 = 3, r1 = -1, c0 = 3, c1 = -1;
+  for (let i = 0; i < 9; i++) if (craftGrid[i]) { const r = i / 3 | 0, c = i % 3; r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
+  if (r1 < 0) return null;
+  const rows = [];
+  for (let r = r0; r <= r1; r++) { const row = []; for (let c = c0; c <= c1; c++) { const s = craftGrid[r * 3 + c]; row.push(s ? s.id : 0); } rows.push(row); }
+  return rows;
+}
+function shapeFits(r, g, mirror) {
+  const h = r.shape.length, w = r.shape[0].length;
+  if (g.length !== h || g[0].length !== w) return false;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const ch = r.shape[y][mirror ? w - 1 - x : x];
+    if ((ch === ' ' ? 0 : r.key[ch]) !== g[y][x]) return false;
+  }
+  return true;
+}
+function matchRecipe() {
+  const g = trimmedGrid(); if (!g) return null;
+  const items = g.flat().filter(Boolean).sort((a, b) => a - b);
+  return RECIPES.find(r => {
+    if (r.less) { const want = [...r.less].sort((a, b) => a - b); return want.length === items.length && want.every((v, i) => v === items[i]); }
+    return shapeFits(r, g, false) || shapeFits(r, g, true);
+  }) || null;
+}
+function consumeGrid() { for (let i = 0; i < 9; i++) { const s = craftGrid[i]; if (s && !--s.count) craftGrid[i] = null; } }
+function loadRecipe(r) {
+  for (let i = 0; i < 9; i++) if (craftGrid[i]) { addItem(craftGrid[i].id, craftGrid[i].count); craftGrid[i] = null; }
+  const need = recipeNeeds(r);
+  if (!Object.entries(need).every(([id, n]) => countItem(+id) >= n)) { flashName('Missing ingredients'); return; }
+  Object.entries(need).forEach(([id, n]) => removeItem(+id, n));
+  if (r.less) r.less.forEach((id, i) => craftGrid[i] = { id, count: 1 });
+  else r.shape.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== ' ') craftGrid[y * 3 + x] = { id: r.key[ch], count: 1 }; }));
+}
+function chestSlotClick(i) {
+  if (!held) { if (openChestSlots[i]) { held = openChestSlots[i]; openChestSlots[i] = null; } }
+  else if (!openChestSlots[i]) { openChestSlots[i] = held; held = null; }
+  else if (openChestSlots[i].id === held.id) { const k = Math.min(64 - openChestSlots[i].count, held.count); openChestSlots[i].count += k; held.count -= k; if (!held.count) held = null; }
+  else { const t = openChestSlots[i]; openChestSlots[i] = held; held = t; }
+  renderChest();
+  if (mp) mpSyncChest(openChestKey, openChestSlots);
+}
+function renderChest() {
+  let h = ''; for (let i = 0; i < 27; i++) h += slotHTML(openChestSlots[i]);
+  const g = $('chestGrid'); g.innerHTML = h;
+  [...g.children].forEach((el, i) => el.onclick = () => chestSlotClick(i));
+  let h2 = ''; for (let i = 9; i < 36; i++) h2 += slotHTML(inv[i]);
+  const pg = $('chestPlayerGrid'); pg.innerHTML = h2;
+  [...pg.children].forEach((el, i) => el.onclick = () => { slotClick(i + 9); renderChest(); });
+  let h3 = ''; for (let i = 0; i < 9; i++) h3 += slotHTML(inv[i], i === sel ? 'sel' : '');
+  const hg = $('chestHotGrid'); hg.innerHTML = h3;
+  [...hg.children].forEach((el, i) => el.onclick = () => { slotClick(i); renderChest(); });
+  renderHeld();
+}
+function closeChest() {
+  if (held) { addItem(held.id, held.count); held = null; renderHeld(); }
+  openChestKey = null; openChestSlots = null;
+  resume();
+}
+function renderCraftGrid() {
+  let h = ''; for (let i = 0; i < 9; i++) h += slotHTML(craftGrid[i]);
+  const g = $('craftGridEl'); g.innerHTML = h;
+  [...g.children].forEach((el, i) => el.onclick = () => craftGridClick(i));
+  const r = matchRecipe(), out = $('craftOutput');
+  out.className = 'slot big' + (r ? ' ready' : '');
+  out.innerHTML = r ? slotHTML({ id: r.out[0], count: r.out[1] }) : '';
+  out.onclick = () => {
+    if (held) return;
+    const rec = matchRecipe(); if (!rec) return;
+    consumeGrid();
+    addItem(rec.out[0], rec.out[1]);
+    renderCraftGrid(); renderInv();
+  };
+}
+function renderHeld() {
+  const el = $('held');
+  if (!held) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  el.innerHTML = iconHTML(held.id) + (mode === 'survival' && held.count > 1 ? `<span class="cnt">${held.count}</span>` : '');
+}
+addEventListener('mousemove', e => { const el = $('held'); el.style.left = e.clientX - 20 + 'px'; el.style.top = e.clientY - 20 + 'px'; });
+
+/* ================= mobs system ================= */
+const rnd = n => Math.floor(Math.random() * n);
+const skullDrop = id => () => Math.random() < .08 ? [[id, 1]] : [];
+const MOB = {
+  sheep:   { w:.9, h:1.3, hp:8,  passive:1, drops:() => [[18, 1 + rnd(2)], [101, 1 + rnd(2)]] },
+  pig:     { w:.9, h:.9,  hp:10, passive:1, drops:() => [[103, 1 + rnd(3)]] },
+  cow:     { w:.9, h:1.4, hp:10, passive:1, drops:() => [[105, 1 + rnd(3)], [111, rnd(3)]] },
+  chicken: { w:.4, h:.7,  hp:4,  passive:1, drops:() => [[107, 1], [112, rnd(3)]] },
+  zombie:  { w:.6, h:1.9, hp:16, hostile:1, dmg:3, speed:2.4, biped:1, drops:() => [[109, rnd(3)], ...skullDrop(91)()] },
+  spider:  { w:1.2, h:.9, hp:14, hostile:1, dmg:2, speed:3.8, drops:() => [[113, rnd(3)], [146, Math.random() < .3 ? 1 : 0]] },
+  slime:   { w:.9, h:.9,  hp:6,  hostile:1, dmg:2, drops:() => [[147, rnd(3)]] },
+  creeper: { w:.6, h:1.7, hp:20, hostile:1, dmg:0, speed:2, drops:() => [[120, rnd(3)], ...skullDrop(92)()], explodes:1 },
+  skeleton: { w:.6, h:1.9, hp:20, hostile:1, dmg:0, speed:2.4, biped:1, ranged:1, drops:() => [[145, 1 + rnd(3)], [168, rnd(2)], ...skullDrop(89)()] },
+  enderman: { w:.6, h:2.9, hp:40, hostile:1, dmg:7, speed:3.2, drops:() => [[121, rnd(2)]] },
+  wither_skeleton: { w:.6, h:1.9, hp:20, hostile:1, dmg:0, speed:2.4, biped:1, ranged:1, drops:() => [[145, rnd(2)], [110, rnd(2)], ...skullDrop(90)()] },
+  cat: { w:.5, h:.5, hp:8, passive:1, tameable:1, tameItem:159, speed:3, drops:() => [] },
+  dog: { w:.6, h:.65, hp:18, passive:1, tameable:1, tameItem:145, speed:3.6, fights:1, dmg:4, drops:() => [] },
+};
+const PASSIVE = ['sheep', 'pig', 'cow', 'chicken'];
+const PETS = ['cat', 'dog'];
+const mobs = [];
+function mobMat(m, hex, opts) { const mat = new THREE.MeshBasicMaterial(Object.assign({ color: hex }, opts || {})); mat.userData.base = new THREE.Color(hex); m.mats.push(mat); return mat; }
+function box(g, w, h, d, x, y, z, mat, pivotTop) { const geo = new THREE.BoxGeometry(w, h, d); if (pivotTop) geo.translate(0, -h / 2, 0); const b = new THREE.Mesh(geo, mat); b.position.set(x, y, z); g.add(b); return b; }
+function quadLegs(m, g, w, h, xs, zs, mat) { for (const [lx, lz] of [[-xs, zs], [xs, zs], [-xs, -zs], [xs, -zs]]) m.legs.push(box(g, w, h, w, lx, h, lz, mat, true)); }
+function makeMob(type, x, y, z, dim = DIM_OVERWORLD) {
+  const cfg = MOB[type];
+  const m = { type, cfg, pos: new V3(x, y, z), vel: new V3(), yaw: Math.random() * 6.28, timer: 0, walk: false, stun: 0, hurt: 0, panic: 0, atk: 0, anim: 0,
+    mats: [], legs: [], spiderLegs: [], w: cfg.w, h: cfg.h, hp: cfg.hp, burnT: 0, burnCheck: 0, burning: false, onGround: false, hitWall: false, dim, fuseTick: 0,
+    tamed: false, sitting: false };
+  const g = new THREE.Group(); const M = (hex, o) => mobMat(m, hex, o);
+  if (type === 'sheep') {
+    const wool = M(0xeeeeea), skin = M(0xa99a8c), eye = M(0x222222);
+    box(g, .9, .75, 1.3, 0, .88, 0, wool);
+    box(g, .5, .5, .55, 0, 1.18, .82, skin); box(g, .56, .2, .4, 0, 1.4, .76, wool);
+    for (const ex of [-.14, .14]) box(g, .08, .08, .02, ex, 1.22, 1.1, eye);
+    quadLegs(m, g, .22, .56, .28, .42, skin);
+  } else if (type === 'pig') {
+    const pink = M(0xeba3a3), snout = M(0xd98282), eye = M(0x222222);
+    box(g, .8, .62, 1.15, 0, .66, 0, pink);
+    box(g, .6, .56, .56, 0, .82, .78, pink); box(g, .3, .22, .08, 0, .74, 1.08, snout);
+    for (const ex of [-.16, .16]) box(g, .08, .08, .02, ex, .92, 1.07, eye);
+    quadLegs(m, g, .24, .36, .24, .38, pink);
+  } else if (type === 'cow') {
+    const brown = M(0x5a3b28), white = M(0xe8e2d8), horn = M(0xd8ccb0), muz = M(0xc9a193), eye = M(0x181818);
+    box(g, .95, .85, 1.45, 0, 1.02, 0, brown);
+    box(g, .97, .45, .5, 0, 1.12, .25, white); box(g, .97, .3, .4, 0, .9, -.4, white);
+    box(g, .64, .6, .5, 0, 1.32, .95, brown); box(g, .5, .26, .1, 0, 1.12, 1.22, muz);
+    for (const s of [-1, 1]) { box(g, .1, .18, .1, s * .36, 1.66, .95, horn); box(g, .08, .08, .02, s * .18, 1.42, 1.21, eye); }
+    quadLegs(m, g, .26, .6, .3, .5, brown);
+  } else if (type === 'chicken') {
+    const wh = M(0xf2f2ee), beak = M(0xf0b030), red = M(0xd02a2a), eye = M(0x111111);
+    box(g, .4, .4, .52, 0, .46, 0, wh);
+    for (const s of [-1, 1]) box(g, .06, .26, .36, s * .23, .48, 0, wh);
+    box(g, .28, .36, .24, 0, .78, .28, wh); box(g, .2, .08, .14, 0, .8, .46, beak); box(g, .1, .1, .05, 0, .7, .42, red);
+    for (const s of [-1, 1]) box(g, .05, .05, .02, s * .1, .86, .4, eye);
+    for (const s of [-1, 1]) m.legs.push(box(g, .06, .28, .06, s * .1, .28, 0, beak, true));
+  } else if (type === 'zombie') {
+    const skin = M(0x6d8a5a), shirt = M(0x3f8a8a), pants = M(0x3a3f7a), eye = M(0x1a1a1a);
+    for (const s of [-1, 1]) m.legs.push(box(g, .26, .75, .26, s * .14, .75, 0, pants, true));
+    box(g, .56, .75, .3, 0, 1.125, 0, shirt);
+    box(g, .5, .5, .5, 0, 1.75, 0, skin);
+    for (const s of [-1, 1]) box(g, .09, .06, .02, s * .12, 1.8, .26, eye);
+    for (const s of [-1, 1]) { const a = box(g, .24, .72, .24, s * .4, 1.46, 0, skin, true); a.rotation.x = -Math.PI / 2; }
+  } else if (type === 'spider') {
+    const body = M(0x2e2620), head = M(0x3a302a), eye = M(0xd01a1a), leg = M(0x241e1a);
+    box(g, .9, .55, .9, 0, .5, -.25, body);
+    box(g, .6, .5, .55, 0, .48, .45, head);
+    for (const s of [-1, 1]) { box(g, .09, .09, .02, s * .14, .56, .73, eye); box(g, .06, .06, .02, s * .06, .46, .73, eye); }
+    for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
+      const geo = new THREE.BoxGeometry(.95, .08, .08); geo.translate(s * .475, 0, 0);
+      const l = new THREE.Mesh(geo, leg); l.position.set(s * .25, .5, .35 - i * .22);
+      l.rotation.z = -s * .55; l.rotation.y = (i - 1.5) * .3 * s; l.userData.baseY = l.rotation.y; g.add(l); m.spiderLegs.push(l);
+    }
+  } else if (type === 'creeper') {
+    const green = M(0x4fa83a), dark = M(0x2f6a22), face = M(0x0c0c0c);
+    quadLegs(m, g, .22, .38, .13, .2, dark);
+    box(g, .5, .8, .3, 0, .78, 0, green);
+    box(g, .5, .5, .5, 0, 1.43, 0, green);
+    for (const s of [-1, 1]) box(g, .12, .12, .02, s * .12, 1.52, .26, face);
+    box(g, .12, .18, .02, 0, 1.36, .26, face);
+    for (const s of [-1, 1]) box(g, .06, .1, .02, s * .08, 1.26, .26, face);
+  } else if (type === 'skeleton' || type === 'wither_skeleton') {
+    const col = type === 'skeleton' ? 0xd8d8d0 : 0x2a2a2a;
+    const bone = M(col), eye = M(type === 'skeleton' ? 0x222222 : 0x777777);
+    for (const s of [-1, 1]) m.legs.push(box(g, .14, .75, .14, s * .12, .75, 0, bone, true));
+    box(g, .5, .72, .22, 0, 1.12, 0, bone);
+    box(g, .5, .5, .5, 0, 1.73, 0, bone);
+    for (const s of [-1, 1]) box(g, .1, .08, .02, s * .12, 1.76, .26, eye);
+    for (const s of [-1, 1]) { const a = box(g, .12, .72, .12, s * .32, 1.46, 0, bone, true); a.rotation.x = -Math.PI / 2; }
+  } else if (type === 'cat') {
+    const fur = M(0xe8a838), white = M(0xf2ece0), pink = M(0xd88090), eye = M(0x3a8a3a);
+    box(g, .3, .28, .5, 0, .32, 0, fur);
+    box(g, .22, .24, .22, 0, .4, .34, fur);
+    box(g, .2, .1, .16, 0, .3, .46, white);
+    for (const s of [-1, 1]) box(g, .06, .1, .02, s * .07, .12, .44, pink, true);
+    for (const s of [-1, 1]) box(g, .06, .06, .02, s * .06, .45, .45, eye);
+    for (const s of [-1, 1]) box(g, .08, .1, .04, s * .12, .5, .42, fur);
+    const tail = box(g, .06, .32, .06, 0, .3, -.28, fur, true); tail.rotation.x = .6; m.tail = tail;
+    quadLegs(m, g, .08, .28, .12, .2, fur);
+  } else if (type === 'dog') {
+    const fur = M(0xcfc3a8), dark = M(0x8a7a5c), eye = M(0x2a1a10), nose = M(0x1a1a1a);
+    box(g, .38, .34, .62, 0, .42, 0, fur);
+    box(g, .28, .3, .28, 0, .5, .42, fur);
+    box(g, .2, .14, .16, 0, .4, .58, dark);
+    box(g, .06, .06, .02, 0, .38, .66, nose);
+    for (const s of [-1, 1]) box(g, .06, .06, .02, s * .08, .56, .56, eye);
+    for (const s of [-1, 1]) box(g, .1, .14, .04, s * .14, .64, .38, dark);
+    const tail = box(g, .07, .28, .07, 0, .42, -.34, fur, true); tail.rotation.x = -.5; m.tail = tail;
+    quadLegs(m, g, .1, .38, .14, .26, fur);
+  } else if (type === 'enderman') {
+    const black = M(0x141414), eye = M(0xd070f0);
+    for (const s of [-1, 1]) m.legs.push(box(g, .14, 1.5, .14, s * .12, 1.5, 0, black, true));
+    box(g, .5, .75, .25, 0, 1.88, 0, black);
+    box(g, .5, .45, .5, 0, 2.5, 0, black);
+    box(g, .38, .06, .02, 0, 2.5, .26, eye);
+    for (const s of [-1, 1]) box(g, .12, 1.5, .12, s * .32, 1.5, 0, black);
+  } else {
+    const outer = box(g, .9, .9, .9, 0, .45, 0, M(0x6fd14f, { transparent: true, opacity: .62, depthWrite: false })); outer.renderOrder = 2;
+    box(g, .52, .52, .52, 0, .45, 0, M(0x3e8a2c));
+    const eye = M(0x14230f);
+    for (const ex of [-.2, .2]) box(g, .14, .14, .02, ex, .58, .46, eye);
+    box(g, .12, .06, .02, 0, .34, .46, eye);
+    m.body = g;
+  }
+  m.g = g; g.position.copy(m.pos); scene.add(g); mobs.push(m); return m;
+}
+function removeMob(m) { scene.remove(m.g); m.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); m.mats.forEach(x => x.dispose()); m.dead = true; }
+function killMob(m, drops) {
+  const col = { sheep: [236, 236, 230], pig: [235, 163, 163], cow: [90, 59, 40], chicken: [242, 242, 238], zombie: [109, 138, 90], spider: [46, 38, 32], slime: [110, 210, 80], creeper: [0, 150, 0], skeleton: [240, 240, 240], enderman: [0, 0, 0], wither_skeleton: [50, 50, 50], cat: [232, 168, 56], dog: [207, 195, 168] }[m.type];
+  burst(m.pos.x - .5, m.pos.y, m.pos.z - .5, col);
+  if (drops && mode === 'survival') for (const [id, n] of m.cfg.drops()) if (n > 0) addItem(id, n);
+  removeMob(m);
+}
+function topSolid(x, z, dim = DIM_OVERWORLD) { for (let y = CH - 1; y > 0; y--) { const b = getBlock(x, y, z, dim); if (b) return { y, b }; } return null; }
+let spawnT = 0;
+function trySpawn(kind, dim = DIM_OVERWORLD) {
+  const a = Math.random() * 6.28, r = 16 + Math.random() * 22;
+  const x = Math.floor(P.pos.x + Math.cos(a) * r), z = Math.floor(P.pos.z + Math.sin(a) * r);
+  const ch = chunks.get(dim + ':' + key(Math.floor(x / CS), Math.floor(z / CS))); if (!ch || !ch.built) return;
+  const t = topSolid(x, z, dim); if (!t) return;
+  if (kind === 'passive') {
+    if (t.b !== 1 && dim === DIM_OVERWORLD) return;
+    if (Math.random() < .06) { makeMob(PETS[rnd(2)], x + .5, t.y + 1, z + .5, dim); return; }
+    const type = PASSIVE[rnd(4)], n = type === 'chicken' ? 1 + rnd(2) : 1;
+    for (let i = 0; i < n; i++) makeMob(type, x + .5 + i * .3, t.y + 1, z + .5, dim);
+  } else {
+    const types = dim === DIM_OVERWORLD ? ['zombie', 'spider', 'slime', 'skeleton', 'creeper'] : dim === DIM_NETHER ? ['wither_skeleton', 'slime'] : ['enderman'];
+    const type = types[rnd(types.length)];
+    if ([5, 6, 7, 26, 27, 28, 29, 35, 20].includes(t.b)) return;
+    makeMob(type, x + .5, t.y + 1, z + .5, dim);
+  }
+}
+function wander(m, dt, sp) {
+  if (m.timer <= 0) { m.timer = 2 + Math.random() * 4; m.walk = Math.random() < .6; m.yaw = Math.random() * 6.28; }
+  if (m.stun <= 0) {
+    if (m.walk) { m.vel.x = Math.sin(m.yaw) * sp; m.vel.z = Math.cos(m.yaw) * sp; } else { m.vel.x *= .8; m.vel.z *= .8; }
+    if (m.hitWall && m.onGround) m.vel.y = 8;
+  }
+}
+function updateMobs(dt, light, dim = DIM_OVERWORLD) {
+  const night = light < .38;
+  spawnT -= dt;
+  if (spawnT <= 0) {
+    spawnT = 1;
+    if (dim === DIM_OVERWORLD && mobs.filter(m => m.cfg.passive).length < 10) trySpawn('passive', dim);
+    if (mode === 'survival' && (night || dim !== DIM_OVERWORLD) && mobs.filter(m => m.dim === dim && m.cfg.hostile).length < 8) trySpawn('hostile', dim);
+  }
+  for (const m of mobs) {
+    if (m.dim !== dim) continue;
+    const dxp = P.pos.x - m.pos.x, dzp = P.pos.z - m.pos.z, dist = Math.hypot(dxp, dzp), dy = P.pos.y - m.pos.y;
+    if (dist > 80 || (dim === DIM_OVERWORLD && (m.type === 'slime' || m.type === 'spider') && light > .6 && Math.random() < dt * .25)) { removeMob(m); continue; }
+    const ch = chunks.get(dim + ':' + key(Math.floor(m.pos.x / CS), Math.floor(m.pos.z / CS)));
+    if (!ch || !ch.built) continue;
+    const inW = getBlock(Math.floor(m.pos.x), Math.floor(m.pos.y + .3), Math.floor(m.pos.z), dim) === 5;
+    const inLava = getBlock(Math.floor(m.pos.x), Math.floor(m.pos.y + .3), Math.floor(m.pos.z), dim) === 41;
+    if (inW || inLava) m.vel.y = Math.min(m.vel.y + 22 * dt, 2.2); else m.vel.y = Math.max(m.vel.y - 28 * dt, m.type === 'chicken' ? -3 : -50);
+    m.stun -= dt; m.timer -= dt; m.panic -= dt; m.atk -= dt;
+    const target = m.cfg.hostile && mode === 'survival' && state === 'play' && dist < 24 && Math.abs(dy) < 10;
+    if (m.tamed) {
+      if (m.sitting) { m.vel.x *= .8; m.vel.z *= .8; }
+      else if (m.cfg.fights) {
+        const foe = mobs.find(o => o.dim === dim && o.cfg.hostile && Math.hypot(o.pos.x - m.pos.x, o.pos.z - m.pos.z) < 8);
+        if (foe) {
+          const fdx = foe.pos.x - m.pos.x, fdz = foe.pos.z - m.pos.z, fdist = Math.hypot(fdx, fdz) || 1;
+          m.yaw = Math.atan2(fdx, fdz);
+          if (m.stun <= 0) { m.vel.x = fdx / fdist * m.cfg.speed; m.vel.z = fdz / fdist * m.cfg.speed; if (m.hitWall && m.onGround) m.vel.y = 8; }
+          if (fdist < 1.1 && m.atk <= 0) { m.atk = .6; foe.hp -= m.cfg.dmg; foe.hurt = .25; foe.stun = .2; if (foe.hp <= 0) killMob(foe, true); }
+        } else if (dist > 3) { m.yaw = Math.atan2(dxp, dzp); if (m.stun <= 0) { m.vel.x = Math.sin(m.yaw) * m.cfg.speed; m.vel.z = Math.cos(m.yaw) * m.cfg.speed; if (m.hitWall && m.onGround) m.vel.y = 8; } }
+        else { m.vel.x *= .8; m.vel.z *= .8; }
+      } else if (dist > 3) {
+        m.yaw = Math.atan2(dxp, dzp);
+        if (m.stun <= 0) { m.vel.x = Math.sin(m.yaw) * m.cfg.speed; m.vel.z = Math.cos(m.yaw) * m.cfg.speed; if (m.hitWall && m.onGround) m.vel.y = 8; }
+      } else { m.vel.x *= .8; m.vel.z *= .8; }
+      if (m.tail) m.tail.rotation.z = Math.sin(now * 4) * .2;
+    } else if (m.cfg.passive) {
+      if (m.panic > 0) {
+        if (m.timer > .8 || m.timer <= 0) { m.timer = .8; m.yaw = Math.atan2(-dxp, -dzp) + (Math.random() - .5); }
+        if (m.stun <= 0) { m.vel.x = Math.sin(m.yaw) * 4.2; m.vel.z = Math.cos(m.yaw) * 4.2; if (m.hitWall && m.onGround) m.vel.y = 8; }
+      } else wander(m, dt, m.type === 'chicken' ? 1 : 1.3);
+    } else if (m.type === 'slime') {
+      if (m.onGround && m.stun <= 0) {
+        m.vel.x = 0; m.vel.z = 0;
+        if (m.timer <= 0) {
+          m.timer = .9 + Math.random() * 1.2;
+          m.yaw = target ? Math.atan2(dxp, dzp) : Math.random() * 6.28;
+          m.vel.y = 7.5; m.vel.x = Math.sin(m.yaw) * 3.4; m.vel.z = Math.cos(m.yaw) * 3.4;
+        }
+      }
+      const sq = m.onGround ? 1 : 1 + Math.max(-.25, Math.min(.25, m.vel.y * .04));
+      if (m.body) m.body.scale.set(2 - sq, sq, 2 - sq);
+    } else if (m.cfg.explodes) {
+      if (target) {
+        m.yaw = Math.atan2(dxp, dzp);
+        if (m.stun <= 0) { m.vel.x = Math.sin(m.yaw) * 2; m.vel.z = Math.cos(m.yaw) * 2; if (m.hitWall && m.onGround) m.vel.y = 8; }
+        if (dist < 2) { m.fuseTick += dt; if (m.fuseTick > 1.5) { igniteTNT(m.pos.x, m.pos.y, m.pos.z, dim); removeMob(m); continue; } }
+      } else { m.fuseTick = 0; wander(m, dt, 1); }
+    } else if (m.cfg.ranged) {
+      m.shootT = (m.shootT || 0) - dt;
+      if (target) {
+        m.yaw = Math.atan2(dxp, dzp);
+        if (m.stun <= 0) {
+          if (dist > 11) { m.vel.x = Math.sin(m.yaw) * m.cfg.speed; m.vel.z = Math.cos(m.yaw) * m.cfg.speed; if (m.hitWall && m.onGround) m.vel.y = 8; }
+          else if (dist < 4) { m.vel.x = -Math.sin(m.yaw) * m.cfg.speed * .6; m.vel.z = -Math.cos(m.yaw) * m.cfg.speed * .6; }
+          else { m.vel.x *= .8; m.vel.z *= .8; }
+        }
+        if (m.shootT <= 0 && dist > 2 && dist < 16 && mode === 'survival') {
+          m.shootT = 1.6 + Math.random() * .8;
+          const dir = new V3(dxp, dy * .12, dzp).normalize();
+          shootArrow(new V3(m.pos.x, m.pos.y + m.h * .7, m.pos.z), dir, 20, dim, false);
+        }
+      } else wander(m, dt, 1);
+    } else {
+      if (target) {
+        m.yaw = Math.atan2(dxp, dzp);
+        if (m.stun <= 0) {
+          m.vel.x = Math.sin(m.yaw) * m.cfg.speed; m.vel.z = Math.cos(m.yaw) * m.cfg.speed;
+          if (m.hitWall && m.onGround) m.vel.y = 8;
+        }
+      } else wander(m, dt, 1);
+    }
+    if (m.cfg.hostile && mode === 'survival' && m.atk <= 0 && dist < (m.type === 'spider' ? 1.5 : 1.2) && dy > -1.2 && dy < 1.6 && !m.cfg.explodes && !m.cfg.ranged) {
+      m.atk = 1; damage(m.cfg.dmg); exhaust(.1);
+      const k = dist || 1; P.vel.x += dxp / k * 6; P.vel.z += dzp / k * 6; P.vel.y = 5;
+    }
+    if (m.type === 'zombie') {
+      m.burnCheck -= dt;
+      if (m.burnCheck <= 0) { m.burnCheck = 1; const t = topSolid(Math.floor(m.pos.x), Math.floor(m.pos.z), dim); m.burning = light > .6 && !inW && (!t || t.y < m.pos.y) && dim === DIM_OVERWORLD; }
+      if (m.burning) { m.burnT += dt; if (m.burnT > .5) { m.burnT = 0; m.hp--; m.hurt = .15; burst(m.pos.x - .5, m.pos.y + .8, m.pos.z - .5, [255, 150, 40], 3); if (m.hp <= 0) { killMob(m, true); continue; } } }
+    }
+    moveEntity(m, dt, dim);
+    m.g.position.copy(m.pos); m.g.rotation.y = m.yaw;
+    m.anim += Math.hypot(m.vel.x, m.vel.z) * dt * 3;
+    const sw = Math.sin(m.anim) * .6;
+    if (m.cfg.biped || m.type === 'chicken') m.legs.forEach((l, i) => l.rotation.x = i % 2 ? sw : -sw);
+    else m.legs.forEach((l, i) => l.rotation.x = (i === 0 || i === 3) ? sw : -sw);
+    m.spiderLegs.forEach((l, i) => l.rotation.y = l.userData.baseY + Math.sin(m.anim * 2 + i) * .25);
+    m.hurt -= dt;
+    const L = Math.max(light, .3);
+    for (const mt of m.mats) { if (m.hurt > 0) mt.color.setRGB(1, .3, .3).multiplyScalar(L); else mt.color.copy(mt.userData.base).multiplyScalar(L); }
+  }
+  for (let i = mobs.length - 1; i >= 0; i--) if (mobs[i].dead) mobs.splice(i, 1);
+}
+const rayc = new THREE.Raycaster();
+function mobUnderCrosshair(maxD) {
+  rayc.set(camera.position, camera.getWorldDirection(new V3())); rayc.far = maxD;
+  const hits = rayc.intersectObjects(mobs.map(m => m.g), true);
+  if (!hits.length) return null;
+  let o = hits[0].object; while (o.parent && !mobs.some(m => m.g === o)) o = o.parent;
+  return mobs.find(m => m.g === o) || null;
+}
+function hitMob(m) {
+  m.hp -= mode === 'creative' ? 20 : 3; m.hurt = .25; m.stun = .35; m.panic = 5;
+  const d = camera.getWorldDirection(new V3()); m.vel.x = d.x * 7; m.vel.z = d.z * 7; m.vel.y = 5;
+  exhaust(.1);
+  if (m.hp <= 0) killMob(m, true);
+}
+
+/* ================= commands ================= */
+function runCommand(cmd, dim = DIM_OVERWORLD) {
+  const args = cmd.trim().split(/\s+/);
+  const c = args[0].toLowerCase();
+  try {
+    if (c === '/gamemode') { mode = args[1] === 'creative' ? 'creative' : 'survival'; if (mode === 'survival') P.fly = false; $('modeTag').textContent = mode === 'survival' ? 'Survival' : 'Creative'; renderStats(); return 'Mode: ' + mode; }
+    if (c === '/time') { const t = parseInt(args[1]) || 0; gameTime = (t % 24000) / 24000; return 'Time set to ' + t; }
+    if (c === '/give') { const id = parseInt(args[1]); const n = parseInt(args[2]) || 1; if (BL[id]) addItem(id, n); return 'Gave ' + n + 'x ' + (BL[id]?.n || 'unknown'); }
+    if (c === '/tp') { const x = parseFloat(args[1]), y = parseFloat(args[2]), z = parseFloat(args[3]); P.pos.set(x, y, z); return 'Teleported'; }
+    if (c === '/setblock') { const x = parseInt(args[1]), y = parseInt(args[2]), z = parseInt(args[3]), id = parseInt(args[4]); setBlock(x, y, z, id, dim); flushDirty(); return 'Block set'; }
+    if (c === '/weather') { return 'Weather system not yet implemented'; }
+    if (c === '/dim') { switchDim(Math.max(0, Math.min(2, parseInt(args[1]) || 0))); return 'Dimension: ' + DIM_NAMES[P.dim]; }
+    if (c === '/summon') {
+      const type = args[1]; if (!MOB[type]) return 'Unknown mob: ' + type;
+      const dir = camera.getWorldDirection(new V3()), x = P.pos.x + dir.x * 3, z = P.pos.z + dir.z * 3;
+      const t = topSolid(Math.floor(x), Math.floor(z), P.dim);
+      makeMob(type, x, t ? t.y + 1 : P.pos.y, z, P.dim);
+      return 'Summoned ' + type;
+    }
+  } catch(e) { return 'Error: ' + e.message; }
+  return 'Unknown command';
+}
+
+function switchDim(nd) {
+  const pets = mobs.filter(m => m.tamed).map(m => ({ type: m.type, sitting: m.sitting, hp: m.hp }));
+  for (const [k, ch] of chunks) { disposeMeshes(ch); chunks.delete(k); }
+  mobs.slice().forEach(removeMob); mobs.length = 0; TNT_ENTITIES.length = 0;
+  arrows.forEach(a => scene.remove(a.mesh)); arrows.length = 0;
+  P.dim = nd; P.vel.set(0, 0, 0); P.fallStart = null; P.fly = P.fly && mode === 'creative';
+  for (let i = 0; i < 3; i++) updateChunks(1e9, nd);
+  const bx = Math.floor(P.pos.x), bz = Math.floor(P.pos.z);
+  let landed = false;
+  for (let r = 0; r <= 24 && !landed; r++) for (let dz = -r; dz <= r && !landed; dz++) for (let dx = -r; dx <= r && !landed; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+    const t = topSolid(bx + dx, bz + dz, nd);
+    if (t && isSolid(t.b) && t.y < CH - 3) { P.pos.set(bx + dx + .5, t.y + 1.01, bz + dz + .5); landed = true; }
+  }
+  if (!landed) {
+    const py = SEA + 6;
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) setBlock(bx + dx, py, bz + dz, 25, nd);
+    flushDirty();
+    P.pos.set(bx + .5, py + 1.01, bz + .5);
+  }
+  pets.forEach((p, i) => {
+    const ang = i * 1.2, px = P.pos.x + Math.cos(ang) * 1.5, pz = P.pos.z + Math.sin(ang) * 1.5;
+    const t = topSolid(Math.floor(px), Math.floor(pz), nd);
+    const pm = makeMob(p.type, px, (t ? t.y + 1 : P.pos.y), pz, nd);
+    pm.tamed = true; pm.sitting = p.sitting; pm.hp = p.hp;
+  });
+  flashName(DIM_NAMES[nd]);
+}
+
+/* ================= mining & placing ================= */
+let mouseL = false, mouseR = false, mining = null, placeCd = 0, attackCd = 0, breakCd = 0;
+function checkFall(x, y, z, dim = DIM_OVERWORLD) {
+  const id = getBlock(x, y, z, dim); if (!BL[id] || !BL[id].fall) return;
+  let yy = y; while (yy > 0) { const b = getBlock(x, yy - 1, z, dim); if (b === 0 || b === 5) yy--; else break; }
+  if (yy !== y) { setBlock(x, y, z, 0, dim); setBlock(x, yy, z, id, dim); checkFall(x, y + 1, z, dim); }
+}
+function toolSpeedMul(blockId) {
+  const s = inv[sel]; if (!s) return 1;
+  const td = BL[s.id], bd = BL[blockId];
+  if (td.tool === 'shears' && (blockId === 7 || blockId === 27 || blockId === 29)) return 15;
+  if (!td.tool || !bd.cat || TOOL_FOR_CAT[bd.cat] !== td.tool) return 1;
+  return TOOL_MUL[td.tier] || 1;
+}
+function damageTool() {
+  const s = inv[sel]; if (!s) return;
+  const td = BL[s.id]; if (!td.tool) return;
+  s.durability = (s.durability === undefined ? td.maxDur : s.durability) - 1;
+  if (s.durability <= 0) { inv[sel] = null; flashName(td.n + ' broke!'); }
+  renderHotbar();
+}
+function breakBlock(hit) {
+  const id = hit.id, bd = BL[id];
+  if (id === 17 && mode === 'survival') return;
+  if (bd.chest) {
+    const k = chestKey(hit.x, hit.y, hit.z, P.dim), slots = chestData.get(k);
+    if (slots) { slots.forEach(it => { if (it) addItem(it.id, it.count); }); chestData.delete(k); if (mp) mpSyncChest(k, null); }
+  }
+  setBlock(hit.x, hit.y, hit.z, 0, P.dim);
+  burst(hit.x, hit.y, hit.z, tileAvg[bd.t[1]]);
+  if (mode === 'survival') {
+    const s = inv[sel], td = s && BL[s.id];
+    const geared = !bd.tier || (td && td.tool === TOOL_FOR_CAT[bd.cat] && td.tier >= bd.tier);
+    if (geared) {
+      const dr = bd.dr;
+      if (dr === undefined) addItem(id);
+      else if (dr > 0) addItem(dr, bd.dropN ? bd.dropN[0] + Math.floor(Math.random() * (bd.dropN[1] - bd.dropN[0] + 1)) : 1);
+    } else {
+      flashName('Need a ' + TIER_NAMES[bd.tier] + ' ' + TOOL_FOR_CAT[bd.cat] + ' or better!');
+    }
+    if (bd.grassDrop && Math.random() < .1) addItem(152, 1);
+    damageTool();
+    exhaust(.02);
+  }
+  checkFall(hit.x, hit.y + 1, hit.z, P.dim);
+  flushDirty();
+}
+function placeBlock() {
+  const hit = raycast(camera.position, camera.getWorldDirection(new V3()), 6, P.dim); if (!hit) return;
+  const s = inv[sel]; if (!s || BL[s.id].item || BL[s.id].tool || BL[s.id].armor) return;
+  const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
+  const cur = getBlock(x, y, z, P.dim); if (cur !== 0 && cur !== 5) return;
+  if (s.id !== 5) {
+    const hw = P.w / 2;
+    if (x < P.pos.x + hw && x + 1 > P.pos.x - hw && z < P.pos.z + hw && z + 1 > P.pos.z - hw && y < P.pos.y + P.h && y + 1 > P.pos.y) return;
+  }
+  if (!setBlock(x, y, z, s.id, P.dim)) return;
+  if (mode === 'survival') { s.count--; if (!s.count) inv[sel] = null; renderHotbar(); }
+  checkFall(x, y, z, P.dim);
+  flushDirty();
+}
+function bucketSwap(toId) {
+  const s = inv[sel]; s.count--; if (!s.count) inv[sel] = null;
+  addItem(toId, 1); renderHotbar();
+}
+function openFurnace() { bookTab = 'cook'; openInv(); }
+function openCraftBench() { bookTab = 'craft'; openInv(); }
+function toggleDoorAt(x, y, z, dim) {
+  const bd = BL[getBlock(x, y, z, dim)];
+  if (bd.door) { setBlock(x, y, z, bd.opensTo, dim); flushDirty(); return true; }
+  if (bd.doorOpen) { setBlock(x, y, z, bd.doorOpen, dim); flushDirty(); return true; }
+  return false;
+}
+function findAndToggleNearestDoor(cx, cy, cz, dim, r) {
+  for (let dz = -r; dz <= r; dz++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const bd = BL[getBlock(cx + dx, cy + dy, cz + dz, dim)];
+    if (bd.door || bd.doorOpen) return toggleDoorAt(cx + dx, cy + dy, cz + dz, dim);
+  }
+  return false;
+}
+const PENDING_CLOSE = [];
+function activateSwitcher(id, x, y, z, dim) {
+  if (BL[id].n.includes('Button')) {
+    for (let dz = -3; dz <= 3; dz++) for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const bx = x + dx, by = y + dy, bz = z + dz, bd = BL[getBlock(bx, by, bz, dim)];
+      if (bd.door) { setBlock(bx, by, bz, bd.opensTo, dim); flushDirty(); PENDING_CLOSE.push({ x: bx, y: by, z: bz, dim, t: 1.5 }); return; }
+    }
+  } else findAndToggleNearestDoor(x, y, z, dim, 3);
+}
+function chestKey(x, y, z, dim) { return dim + ':' + x + ',' + y + ',' + z; }
+function openChest(x, y, z, dim) {
+  const k = chestKey(x, y, z, dim);
+  if (!chestData.has(k)) chestData.set(k, new Array(27).fill(null));
+  openChestKey = k; openChestSlots = chestData.get(k);
+  setState('chest'); renderChest();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function useItem() {
+  const s = inv[sel]; const d = s && BL[s.id];
+  const nearMob = mobUnderCrosshair(4);
+  if (nearMob && nearMob.cfg.tameable) {
+    if (!nearMob.tamed) {
+      if (d && s.id === nearMob.cfg.tameItem) {
+        s.count--; if (!s.count) inv[sel] = null; renderHotbar();
+        nearMob.tamed = true; nearMob.sitting = false;
+        burst(nearMob.pos.x, nearMob.pos.y + .5, nearMob.pos.z, [255, 150, 200], 8);
+        flashName('Tamed the ' + nearMob.type + '!');
+        return .5;
+      }
+      flashName(nearMob.type === 'cat' ? 'Feed it raw fish to tame it' : 'Feed it a bone to tame it');
+      return .3;
+    }
+    nearMob.sitting = !nearMob.sitting;
+    flashName(nearMob.sitting ? 'Stay' : 'Follow me');
+    return .3;
+  }
+  const lookHit = raycast(camera.position, camera.getWorldDirection(new V3()), 5.5, P.dim);
+  if (lookHit) {
+    const hb = BL[lookHit.id];
+    if (hb.furnace) { openFurnace(); return .3; }
+    if (hb.craftbench) { openCraftBench(); return .3; }
+    if (hb.chest) { openChest(lookHit.x, lookHit.y, lookHit.z, P.dim); return .3; }
+    if (hb.bed) {
+      spawn.set(lookHit.x + .5, lookHit.y + 1.01, lookHit.z + .5);
+      if (P.dim !== DIM_OVERWORLD) { flashName('Respawn point set'); return .3; }
+      const day = (gameTime + .25) % 1;
+      if (day > .25 && day < .75) { flashName('Respawn point set'); return .3; }
+      gameTime = .27; flashName('Slept through the night. Respawn point set'); return .5;
+    }
+    if ((hb.door && !hb.noHandToggle) || (hb.doorOpen && !BL[hb.doorOpen].noHandToggle)) { toggleDoorAt(lookHit.x, lookHit.y, lookHit.z, P.dim); return .3; }
+    if (hb.switcher) { activateSwitcher(lookHit.id, lookHit.x, lookHit.y, lookHit.z, P.dim); return .3; }
+  }
+  if (d && d.tool === 'flint') {
+    if (lookHit && lookHit.id === 37) { igniteTNT(lookHit.x, lookHit.y, lookHit.z, P.dim); flashName('Lit the TNT!'); damageTool(); return .4; }
+    return .3;
+  }
+  if (d && d.tool === 'bow') {
+    if (mode === 'survival' && countItem(168) <= 0) { flashName('No arrows'); return .3; }
+    if (mode === 'survival') removeItem(168, 1);
+    shootArrow(camera.position.clone(), camera.getWorldDirection(new V3()), 26, P.dim, true);
+    damageTool(); flashName('Shot an arrow'); return .4;
+  }
+  if (d && d.tool === 'rod') {
+    if (fishing) { fishing = false; flashName('Reeled in'); return .3; }
+    if (rayFindWater(20, P.dim)) { fishing = true; fishTimer = 2 + Math.random() * 4; flashName('Cast your line...'); return .3; }
+    flashName('No water in range'); return .3;
+  }
+  if (d && d.bucket) {
+    const hit = lookHit;
+    if (d.bucket === 'empty') {
+      const m = mobUnderCrosshair(3.5);
+      if (m && m.type === 'cow') { bucketSwap(141); flashName('Milked the cow'); return .5; }
+      if (hit) {
+        const b = getBlock(hit.x, hit.y, hit.z, P.dim);
+        if (b === 5) { setBlock(hit.x, hit.y, hit.z, 0, P.dim); bucketSwap(139); flashName('Filled with water'); flushDirty(); return .5; }
+        if (b === 41) { setBlock(hit.x, hit.y, hit.z, 0, P.dim); bucketSwap(140); flashName('Filled with lava'); flushDirty(); return .5; }
+      }
+      return .3;
+    }
+    if (d.bucket === 'water' || d.bucket === 'lava') {
+      if (!hit) return .3;
+      const x = hit.x + hit.nx, y = hit.y + hit.ny, z = hit.z + hit.nz;
+      if (getBlock(x, y, z, P.dim) !== 0) return .3;
+      setBlock(x, y, z, d.bucket === 'water' ? 5 : 41, P.dim);
+      bucketSwap(138); flashName('Placed ' + d.bucket); flushDirty();
+      return .5;
+    }
+    if (d.bucket === 'milk') { bucketSwap(138); flashName('Drank milk'); P.sat = Math.min(P.food, P.sat + 1); renderStats(); return .8; }
+  }
+  if (d && d.item && d.food) {
+    if (mode === 'creative') { flashName('No hunger in creative'); return .8; }
+    if (P.food >= 20) { flashName('You are full'); return .8; }
+    P.food = Math.min(20, P.food + d.food); P.sat = Math.min(P.food, P.sat + d.sat);
+    if ((s.id === 109 || s.id === 155) && Math.random() < .3) { P.sat = 0; exhaust(4); }
+    if (d.heal) { P.hp = Math.min(20, P.hp + 4); }
+    s.count--; if (!s.count) inv[sel] = null;
+    burst(camera.position.x - .5 + Math.sin(yaw) * -.6, camera.position.y - .9, camera.position.z - .5 + Math.cos(yaw) * -.6, tileAvg[d.icon], 6);
+    flashName('Ate ' + d.n); renderHotbar(); renderStats();
+    return .8;
+  }
+  placeBlock(); return .22;
+}
+function updateInteract(dt) {
+  placeCd -= dt; attackCd -= dt; breakCd -= dt;
+  const hit = raycast(camera.position, camera.getWorldDirection(new V3()), 5.5, P.dim);
+  if (hit) { selBox.visible = true; selBox.position.set(hit.x + .5, hit.y + .5, hit.z + .5); } else selBox.visible = false;
+  if (mouseR && placeCd <= 0) placeCd = useItem();
+  const bar = $('mine');
+  if (mouseL && mode === 'survival' && hit && attackCd <= 0) {
+    if (!mining || mining.x !== hit.x || mining.y !== hit.y || mining.z !== hit.z) mining = { x: hit.x, y: hit.y, z: hit.z, p: 0 };
+    mining.p += dt * toolSpeedMul(hit.id) / BL[hit.id].hd;
+    bar.classList.remove('hidden'); bar.firstElementChild.style.width = Math.min(100, mining.p * 100) + '%';
+    if (mining.p >= 1) { breakBlock(hit); mining = null; }
+  } else { mining = null; bar.classList.add('hidden'); }
+  if (mouseL && mode === 'creative' && hit && breakCd <= 0) { breakBlock(hit); breakCd = .25; }
+}
+canvas.addEventListener('mousedown', e => {
+  if (state !== 'play') return;
+  if (!locked && !noLock) { lockPointer(); return; }
+  if (e.button === 0) {
+    const hit = raycast(camera.position, camera.getWorldDirection(new V3()), 5.5, P.dim);
+    const m = mobUnderCrosshair(hit ? Math.min(hit.dist, 3.5) : 3.5);
+    if (m && attackCd <= 0) { hitMob(m); attackCd = .35; }
+    else if (mode === 'creative' && hit) { breakBlock(hit); breakCd = .3; }
+    mouseL = true;
+  } else if (e.button === 2) { mouseR = true; placeCd = useItem() + .08; }
+  else if (e.button === 1 && mode === 'creative') {
+    e.preventDefault();
+    const hit = raycast(camera.position, camera.getWorldDirection(new V3()), 6, P.dim);
+    if (hit) { inv[sel] = { id: hit.id, count: 64 }; selectSlot(sel); }
+  }
+});
+addEventListener('mouseup', e => { if (e.button === 0) mouseL = false; if (e.button === 2) mouseR = false; });
+addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('wheel', e => { if (state === 'play') selectSlot(sel + (e.deltaY > 0 ? 1 : -1)); }, { passive: true });
+
+/* ================= pointer lock & states ================= */
+let locked = false, noLock = false;
+function lockPointer() {
+  try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => { noLock = true; }); } catch (e) { noLock = true; }
+}
+document.addEventListener('pointerlockchange', () => {
+  locked = document.pointerLockElement === canvas;
+  if (!locked && state === 'play') openPause();
+});
+document.addEventListener('pointerlockerror', () => { noLock = true; });
+addEventListener('mousemove', e => {
+  if (state !== 'play' || !locked) return;
+  yaw -= e.movementX * .0024; pitch = Math.max(-1.55, Math.min(1.55, pitch - e.movementY * .0024));
+});
+function show(id, on) { $(id).classList.toggle('hidden', !on); }
+function setState(s) {
+  state = s;
+  show('pause', s === 'pause'); show('inv', s === 'inv'); show('dead', s === 'dead'); show('title', s === 'title'); show('cmdInput', s === 'cmd'); show('chestPanel', s === 'chest'); show('charEditor', s === 'char');
+  show('hud', s !== 'title');
+  if (s !== 'play') { for (const k in keys) keys[k] = false; mouseL = mouseR = false; }
+}
+function openPause() { setState('pause'); $('saveMsg').textContent = ''; $('modeBtn').textContent = mode === 'survival' ? 'Switch to creative' : 'Switch to survival'; saveGame(); }
+function resume() { setState('play'); lockPointer(); }
+function openInv() { setState('inv'); renderInv(); if (document.pointerLockElement) document.exitPointerLock(); }
+function closeInv() {
+  if (held) { addItem(held.id, held.count); held = null; renderHeld(); }
+  for (let i = 0; i < 9; i++) if (craftGrid[i]) { addItem(craftGrid[i].id, craftGrid[i].count); craftGrid[i] = null; }
+  resume();
+}
+function openCmd() { setState('cmd'); if (document.pointerLockElement) document.exitPointerLock(); $('cmdBox').focus(); $('cmdBox').value = ''; }
+function die() { setState('dead'); if (document.pointerLockElement) document.exitPointerLock(); }
+$('respawnBtn').onclick = () => { P.hp = 20; P.food = 20; P.sat = 5; P.ex = 0; P.pos.copy(spawn); P.vel.set(0, 0, 0); P.fallStart = null; renderStats(); resume(); };
+$('resumeBtn').onclick = resume;
+$('cmdClose').onclick = resume;
+$('cmdBox').addEventListener('keydown', e => { if (e.key === 'Enter') { const msg = runCommand($('cmdBox').value, P.dim); $('cmdBox').value = '✓ ' + msg; setTimeout(() => resume(), 800); } });
+$('rd').oninput = e => { RD = +e.target.value; $('rdVal').textContent = RD; computeOffsets(); applyFog(); };
+$('modeBtn').onclick = () => {
+  mode = mode === 'survival' ? 'creative' : 'survival'; if (mode === 'survival') P.fly = false; else { P.hp = 20; P.food = 20; }
+  if (mode === 'creative') mobs.filter(m => m.cfg.hostile).forEach(removeMob);
+  $('modeBtn').textContent = mode === 'survival' ? 'Switch to creative' : 'Switch to survival';
+  $('modeTag').textContent = mode === 'survival' ? 'Survival' : 'Creative'; renderStats(); renderHotbar();
+};
+$('saveBtn').onclick = () => { $('saveMsg').textContent = mp ? 'The shared world saves itself on the host\'s computer.' : (saveGame() ? 'World saved in this browser.' : 'This browser would not store the world. Use Download world file instead.'); };
+$('charBtn').onclick = openCharEditor;
+
+/* ================= character editor UI ================= */
+let charReturnState = 'play', curPart = 'head', curColor = '#7a4a2a', erasing = false, painting = false;
+function openCharEditor() {
+  charReturnState = state === 'pause' ? 'pause' : 'play';
+  setState('char'); renderCharCanvas();
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function closeCharEditor() { if (charReturnState === 'pause') setState('pause'); else resume(); }
+$('charCloseBtn').onclick = closeCharEditor;
+const PALETTE = ['#000000', '#ffffff', '#7a4a2a', '#c98a5e', '#e8c8a0', '#3a5fc9', '#2c4aa0', '#c93a3a', '#3ac93a', '#e8d838', '#4a4a6a', '#8a4a8a', '#e88a3a', '#5a5a5a', '#2a2a2a', '#f0f0f0'];
+$('palette2').innerHTML = PALETTE.map(c => `<div style="background:${c}" data-c="${c}"></div>`).join('');
+$('palette2').querySelectorAll('div').forEach(d => d.onclick = () => { curColor = d.dataset.c; erasing = false; $('customColor').value = curColor; });
+$('customColor').oninput = e => { curColor = e.target.value; erasing = false; };
+$('eraseBtn').onclick = () => { erasing = true; };
+$('partTabs').querySelectorAll('button').forEach(b => b.onclick = () => {
+  curPart = b.dataset.p;
+  $('partTabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  renderCharCanvas();
+});
+const skinCv = $('skinCanvas');
+function paintAt(clientX, clientY) {
+  const rect = skinCv.getBoundingClientRect();
+  const x = Math.floor((clientX - rect.left) / rect.width * SKIN_SIZE), y = Math.floor((clientY - rect.top) / rect.height * SKIN_SIZE);
+  if (x < 0 || x >= SKIN_SIZE || y < 0 || y >= SKIN_SIZE) return;
+  skin[curPart][y * SKIN_SIZE + x] = erasing ? null : curColor;
+  redrawSkinPart(curPart); renderCharCanvas();
+}
+skinCv.addEventListener('mousedown', e => { painting = true; paintAt(e.clientX, e.clientY); });
+addEventListener('mouseup', () => painting = false);
+skinCv.addEventListener('mousemove', e => { if (painting) paintAt(e.clientX, e.clientY); });
+skinCv.addEventListener('touchstart', e => { painting = true; paintAt(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+skinCv.addEventListener('touchmove', e => { if (painting) paintAt(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+addEventListener('touchend', () => painting = false);
+function renderCharCanvas() {
+  const g = skinCv.getContext('2d'); g.clearRect(0, 0, SKIN_SIZE, SKIN_SIZE);
+  const data = skin[curPart];
+  for (let y = 0; y < SKIN_SIZE; y++) for (let x = 0; x < SKIN_SIZE; x++) { const col = data[y * SKIN_SIZE + x]; if (col) { g.fillStyle = col; g.fillRect(x, y, 1, 1); } }
+}
+$('charSaveBtn').onclick = () => { saveSkinToStorage(); if (mp) mpSend({ t: 'skin', skin }); $('charMsg').textContent = 'Character saved. It will follow you into every world.'; };
+$('charResetBtn').onclick = () => {
+  for (const part of ['head', 'body', 'arm', 'leg']) { skin[part] = blankPixels(part); redrawSkinPart(part); }
+  renderCharCanvas(); $('charMsg').textContent = 'Reset to the default look.';
+};
+$('charExportBtn').onclick = async () => {
+  const text = JSON.stringify({ format: 'nikocraft-character', version: 1, skin });
+  $('charMsg').textContent = await downloadSkinFile(text);
+};
+$('charImportIn').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch (err) { d = null; }
+    if (!d || d.format !== 'nikocraft-character' || !d.skin) { $('charMsg').textContent = 'That is not a Nikocraft character file.'; return; }
+    loadSkinFromData(d.skin); saveSkinToStorage(); renderCharCanvas();
+    if (mp) mpSend({ t: 'skin', skin });
+    $('charMsg').textContent = 'Character imported and saved.';
+  };
+  r.readAsText(f);
+};
+$('dlBtn').onclick = async () => { const msg = await downloadWorld(worldData()); $('saveMsg').textContent = msg; };
+$('titleBtn').onclick = () => { saveGame(); leaveMultiplayer(); clearWorld(); setState('title'); renderWorldList(); };
+
+addEventListener('keydown', e => {
+  if (state === 'play') {
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'F3', 'Tab'].includes(e.code)) e.preventDefault();
+    keys[e.code] = true;
+    if (/^Digit[1-9]$/.test(e.code)) selectSlot(+e.code.slice(5) - 1);
+    else if (e.code === 'KeyE') openInv();
+    else if (e.code === 'KeyF' && mode === 'creative') { P.fly = !P.fly; P.vel.y = 0; }
+    else if (e.code === 'KeyT') openCmd();
+    else if (e.code === 'KeyN') switchDim((P.dim + 1) % 3);
+    else if (e.code === 'KeyC') openCharEditor();
+    else if (e.code === 'F5') { e.preventDefault(); camMode = (camMode + 1) % 2; }
+    else if (e.code === 'F3') $('info').classList.toggle('hidden');
+    else if (e.code === 'Escape' && noLock) openPause();
+  } else if (state === 'char') {
+    if (e.code === 'KeyE' || e.code === 'Escape') { e.preventDefault(); closeCharEditor(); }
+  } else if (state === 'inv') {
+    if (e.code === 'KeyE' || e.code === 'Escape') { e.preventDefault(); closeInv(); }
+  } else if (state === 'chest') {
+    if (e.code === 'KeyE' || e.code === 'Escape') { e.preventDefault(); closeChest(); }
+  } else if (state === 'pause' && e.code === 'Escape' && noLock) resume();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; mouseL = mouseR = false; });
+
+/* ================= worlds: save, load, files ================= */
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+function listWorlds() { try { return JSON.parse(store.get(INDEX_KEY)) || []; } catch (e) { return []; } }
+function writeIndex(list) { return store.set(INDEX_KEY, JSON.stringify(list)); }
+function worldData() {
+  const ed = {}; for (const [k, m] of edits) ed[k] = [...m];
+  const chests = {}; for (const [k, slots] of chestData) chests[k] = slots;
+  const pets = mobs.filter(m => m.tamed).map(m => ({ type: m.type, x: m.pos.x, y: m.pos.y, z: m.pos.z, dim: m.dim, sitting: m.sitting, hp: m.hp }));
+  return { format: 'nikocraft-world', version: 5, id: worldId, name: worldName, seed: worldSeed, mode, time: gameTime, inv, sel, armor, chests, pets,
+    p: { x: P.pos.x, y: P.pos.y, z: P.pos.z, yaw, pitch, hp: P.hp, food: P.food, sat: P.sat, fly: P.fly, dim: P.dim },
+    spawn: [spawn.x, spawn.y, spawn.z], ed, saved: Date.now() };
+}
+function storeWorld(data) {
+  const ok = store.set(WORLD_PREFIX + data.id, JSON.stringify(data));
+  const list = listWorlds().filter(w => w.id !== data.id);
+  list.unshift({ id: data.id, name: data.name, seed: data.seed, mode: data.mode, saved: data.saved || Date.now() });
+  return writeIndex(list) && ok;
+}
+function saveGame() {
+  if (state === 'title' || !worldId || mp) return false;
+  return storeWorld(worldData());
+}
+function loadWorld(id) { try { return JSON.parse(store.get(WORLD_PREFIX + id)); } catch (e) { return null; } }
+function clearWorld() {
+  for (const ch of chunks.values()) disposeMeshes(ch); chunks.clear(); edits.clear(); dirty.clear();
+  mobs.slice().forEach(removeMob); mobs.length = 0; TNT_ENTITIES.length = 0; worldId = ''; worldSeed = '';
+  arrows.forEach(a => scene.remove(a.mesh)); arrows.length = 0; chestData.clear(); armor = new Array(4).fill(null);
+}
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const safeName = s => (s || 'world').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'world';
+async function downloadTextFile(text, filename, label) {
+  try {
+    if (window.claude && typeof window.claude.use === 'function') {
+      const dl = await window.claude.use('downloads');
+      if (dl) {
+        try { await dl.save({ filename, data: text }); return label + ' saved as ' + filename + '.'; }
+        catch (e) { return e && e.code === 'declined' ? 'Download cancelled.' : 'The download did not go through. Try again in a moment.'; }
+      }
+    }
+  } catch (e) {}
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return label + ' saved as ' + filename + '.';
+  } catch (e) { return 'Downloads are not available here.'; }
+}
+async function downloadWorld(data) { return downloadTextFile(JSON.stringify(data), safeName(data.name) + '.txt', 'World file'); }
+async function downloadSkinFile(text) { return downloadTextFile(text, 'nikocraft-character.json', 'Character file'); }
+function fmtDate(t) { try { return new Date(t).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }); } catch (e) { return ''; } }
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function renderWorldList() {
+  const list = listWorlds(), el = $('worldList');
+  if (!list.length) { el.innerHTML = '<p class="empty">No worlds yet. Create one below, or open a world file.</p>'; return; }
+  el.innerHTML = list.map(w => `<div class="wrow" data-id="${esc(w.id)}"><div class="wname"><b>${esc(w.name)}</b><span>${w.mode === 'creative' ? 'Creative' : 'Survival'}, seed ${esc(w.seed)}, saved ${esc(fmtDate(w.saved))}</span></div>
+    <button class="btn mini go" data-a="play">Play</button><button class="btn mini" data-a="dl">Download</button><button class="btn mini warn" data-a="del">Delete</button></div>`).join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = async () => {
+    const id = b.closest('.wrow').dataset.id, a = b.dataset.a;
+    if (a === 'play') { const d = loadWorld(id); if (d) startGame(d); else $('titleMsg').textContent = 'That world could not be read. Its saved data may be missing.'; }
+    else if (a === 'dl') { const d = loadWorld(id); $('titleMsg').textContent = d ? await downloadWorld(d) : 'That world could not be read.'; }
+    else if (a === 'del') {
+      if (b.dataset.confirm) { store.del(WORLD_PREFIX + id); writeIndex(listWorlds().filter(w => w.id !== id)); renderWorldList(); $('titleMsg').textContent = 'World deleted.'; }
+      else { b.dataset.confirm = '1'; b.textContent = 'Confirm'; }
+    }
+  });
+}
+$('fileIn').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    let d; try { d = JSON.parse(r.result); } catch (err) { d = null; }
+    if (!d || d.format !== 'nikocraft-world' || d.seed === undefined) { $('titleMsg').textContent = 'That file is not a Nikocraft world file.'; return; }
+    d.id = newId(); d.name = d.name || f.name.replace(/\.[^.]+$/, '');
+    if (listWorlds().some(w => w.name === d.name)) d.name += ' (copy)';
+    const ok = storeWorld(d);
+    renderWorldList();
+    $('titleMsg').textContent = ok ? 'Added "' + d.name + '" to your worlds.' : 'The world is too big to keep in this browser, so it will open without saving here.';
+    if (!ok) startGame(d);
+  };
+  r.readAsText(f);
+};
+(() => {
+  const old = store.get('blockhaven-save-v1'); if (!old || store.get('nikocraft-migrated')) return;
+  try { const d = JSON.parse(old); Object.assign(d, { format: 'nikocraft-world', version: 3, id: newId(), name: 'Blockhaven world', saved: Date.now() }); storeWorld(d); } catch (e) {}
+  store.set('nikocraft-migrated', '1');
+})();
+
+/* ================= start & loop ================= */
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h | 0; }
+let chosenMode = 'survival';
+document.querySelectorAll('#modeSeg button').forEach(b => b.onclick = () => {
+  chosenMode = b.dataset.m; document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x === b));
+});
+function startGame(w) {
+  $('loading').classList.remove('hidden');
+  setTimeout(() => {
+    clearWorld();
+    worldId = w.id; worldName = w.name; worldSeed = String(w.seed); seedI = hashStr(worldSeed);
+    mode = w.mode === 'creative' ? 'creative' : 'survival'; gameTime = w.time ?? .03;
+    if (w.ed) for (const k in w.ed) edits.set(k, new Map(w.ed[k]));
+    if (w.chests) for (const k in w.chests) chestData.set(k, w.chests[k]);
+    if (w.pets) for (const p of w.pets) { const pm = makeMob(p.type, p.x, p.y, p.z, p.dim); pm.tamed = true; pm.sitting = !!p.sitting; pm.hp = p.hp ?? pm.hp; }
+    armor = w.armor ? w.armor.map(s => s && BL[s.id] ? s : null) : new Array(4).fill(null);
+    if (w.inv) { inv = w.inv.map(s => s && BL[s.id] ? { id: s.id, count: s.count } : null); while (inv.length < 36) inv.push(null); }
+    else { inv = new Array(36).fill(null); if (mode === 'creative') [1, 2, 3, 9, 8, 6, 10, 11, 4].forEach((id, i) => inv[i] = { id, count: 64 }); }
+    sel = w.sel || 0;
+    if (w.p) {
+      spawn.set(...w.spawn); P.dim = w.p.dim || DIM_OVERWORLD;
+      P.pos.set(w.p.x, w.p.y, w.p.z); yaw = w.p.yaw || 0; pitch = w.p.pitch || 0;
+      P.hp = w.p.hp || 20; P.food = w.p.food ?? 20; P.sat = w.p.sat ?? 5; P.fly = !!w.p.fly && mode === 'creative';
+    } else {
+      let sx = 8, sz = 8;
+      search: for (let r = 0; r < 1200; r += 12) for (let a = 0; a < 8; a++) {
+        const x = Math.round(Math.cos(a * .785) * r), z = Math.round(Math.sin(a * .785) * r);
+        terrain(x, z);
+        if (TH > SEA + 1 && TH < SNOW - 4 && TB !== OCEAN && TB !== FROZEN) { sx = x; sz = z; break search; }
+      }
+      P.pos.set(sx + .5, 80, sz + .5); yaw = 0; pitch = 0; P.hp = 20; P.food = 20; P.sat = 5; P.fly = false; P.dim = DIM_OVERWORLD;
+    }
+    P.ex = 0; P.vel.set(0, 0, 0); P.fallStart = null;
+    computeOffsets(); applyFog();
+    for (let i = 0; i < 3; i++) updateChunks(1e9, P.dim);
+    if (!w.p) {
+      const t = topSolid(Math.floor(P.pos.x), Math.floor(P.pos.z), P.dim);
+      P.pos.y = (t ? t.y : SEA) + 1.01; spawn.copy(P.pos);
+    }
+    updateCameraView();
+    $('modeTag').textContent = mode === 'survival' ? 'Survival' : 'Creative';
+    $('rdVal').textContent = RD;
+    renderHotbar(); renderStats();
+    $('loading').classList.add('hidden');
+    setState('play'); lockPointer();
+    saveGame();
+  }, 40);
+}
+$('newBtn').onclick = () => {
+  const seed = $('seed').value.trim() || String(Math.floor(Math.random() * 1e9));
+  const name = $('wname').value.trim() || 'World ' + (listWorlds().length + 1);
+  startGame({ id: newId(), name, seed, mode: chosenMode });
+};
+renderWorldList();
+addEventListener('beforeunload', saveGame);
+
+/* ================= sky & main loop ================= */
+const cDay = new THREE.Color(0x86b6f5), cNight = new THREE.Color(0x0a0f24), cDusk = new THREE.Color(0xf09a5c), cWater = new THREE.Color(0x1d3f8f);
+const skyC = new THREE.Color(), tmpC = new THREE.Color();
+let cloudDrift = 0, lastT = performance.now(), fps = 0, fpsAcc = 0, fpsN = 0, saveT = 0;
+const cNether = new THREE.Color(0x3a0c08), cEnd = new THREE.Color(0x14101e);
+function updateSky(dt) {
+  const ang = gameTime * Math.PI * 2, sunH = Math.sin(ang);
+  const ow = P.dim === DIM_OVERWORLD;
+  sun.visible = moon.visible = stars.visible = clouds.visible = ow;
+  if (!ow) {
+    const light = P.dim === DIM_NETHER ? .75 : .7;
+    skyC.copy(P.dim === DIM_NETHER ? cNether : cEnd);
+    scene.background = skyC; scene.fog.color.copy(skyC); applyFog(); show('water', false);
+    matOpaque.color.setScalar(light); matWater.color.setScalar(light);
+    return light;
+  }
+  const light = .2 + .8 * sm(Math.max(0, Math.min(1, (sunH + .15) / .4)));
+  skyC.copy(cNight).lerp(cDay, sm(Math.max(0, Math.min(1, (sunH + .2) / .45))));
+  skyC.lerp(cDusk, Math.max(0, 1 - Math.abs(sunH) / .25) * .55);
+  const camBlock = getBlock(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z), P.dim);
+  const under = camBlock === 5 && state !== 'title';
+  show('water', under);
+  if (under) { tmpC.copy(cWater).multiplyScalar(light); scene.background = tmpC; scene.fog.color.copy(tmpC); scene.fog.near = 1; scene.fog.far = 18; }
+  else { scene.background = skyC; scene.fog.color.copy(skyC); applyFog(); }
+  matOpaque.color.setScalar(light); matWater.color.setScalar(light);
+  cloudMat.color.setScalar(Math.max(.35, light));
+  const cp = camera.position;
+  sun.position.set(cp.x + Math.cos(ang) * 400, cp.y + Math.sin(ang) * 400, cp.z + 60); sun.lookAt(cp);
+  moon.position.set(cp.x - Math.cos(ang) * 400, cp.y - Math.sin(ang) * 400, cp.z - 60); moon.lookAt(cp);
+  stars.position.copy(cp); starMat.opacity = Math.max(0, 1 - light * 1.6);
+  cloudDrift += dt * 1.2;
+  clouds.position.set(cp.x, CH + 24, cp.z);
+  cloudTex.offset.set((cp.x + cloudDrift) / 250, -cp.z / 250);
+  return light;
+}
+function loop(t) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(.05, (t - lastT) / 1000); lastT = t; now += dt; frameNo++;
+  fpsAcc += dt; fpsN++; if (fpsAcc > .5) { fps = Math.round(fpsN / fpsAcc); fpsAcc = 0; fpsN = 0; }
+  if (state === 'title') { renderer.clear(); return; }
+  if (state === 'play') {
+    gameTime = (gameTime + dt / DAY_LEN) % 1;
+    updatePlayer(dt);
+    updateInteract(dt);
+    updateTNT(dt);
+    updateArrows(dt);
+    updateFishing(dt);
+    updateSwitchers(dt);
+    updatePlate();
+    saveT += dt; if (saveT > 20) { saveT = 0; saveGame(); }
+  }
+  if (nameTimer > 0) { nameTimer -= dt; if (nameTimer <= 0) $('itemName').style.opacity = 0; }
+  updateChunks(state === 'play' ? 7 : 3, P.dim);
+  const light = updateSky(dt);
+  if (state === 'play') updateMobs(dt, light, P.dim);
+  if (state === 'play') updateMultiplayer(dt);
+  updateParts(dt);
+  if (state === 'play') $('coords').textContent = `${Math.floor(P.pos.x)} / ${Math.floor(P.pos.y)} / ${Math.floor(P.pos.z)}`;
+  if (!$('info').classList.contains('hidden')) {
+    const day = (gameTime + .25) % 1, hrs = Math.floor(day * 24), mins = Math.floor((day * 24 % 1) * 60);
+    terrain(Math.floor(P.pos.x), Math.floor(P.pos.z), P.dim);
+    $('info').textContent = `Nikocraft  ${fps} fps\nXYZ ${P.pos.x.toFixed(1)} / ${P.pos.y.toFixed(1)} / ${P.pos.z.toFixed(1)}\nBiome ${BIOME_NAMES[TB]}\nChunks ${chunks.size}  Mobs ${mobs.length}\nTime ${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}  Seed ${worldSeed}\nDimension ${DIM_NAMES[P.dim]}${mode === 'survival' ? `\nFood ${P.food}  Saturation ${P.sat.toFixed(1)}` : ''}${P.fly ? '\nFlying' : ''}`;
+  }
+  renderer.render(scene, camera);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
